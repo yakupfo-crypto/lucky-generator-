@@ -14,7 +14,10 @@
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
-        .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
+        .status-tag { font-weight: bold; font-size: 10px; border: 1px solid; padding: 2px 4px; border-radius: 3px; text-transform: uppercase; }
+        .ms { color: #00e676; border-color: #00e676; }
+        .ert { color: #ff5252; border-color: #ff5252; }
+        .baslamadi { color: #40c4ff; border-color: #40c4ff; }
     </style>
 </head>
 <body>
@@ -46,37 +49,58 @@ function islemYap() {
     let currentLig = "";
 
     for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
+        let line = lines[i].replace(/[☆✩✰]/g, '');
 
-        // 1. ADIM: LİGİ BUL (Büyük harf ve sayı içermeyen uzun satırlar)
-        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
+        // 1. LİG TESPİTİ
+        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS") && !line.includes("ERTELENEN")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // 2. ADIM: MAÇI BUL (İçinde skor olan satırlar)
-        if (/\d+-\d+/.test(line) && line.length > 5) {
-            let scoreMatch = line.match(/\d+-\d+/);
-            let score = scoreMatch[0];
-            let teams = line.split(score)[0].trim();
-            
-            // "MS" yazılarını ve yıldızları temizle
-            teams = teams.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+        // 2. MAÇ TESPİTİ (Skorlu veya Skorsuz Maçlar)
+        // Kural: İçinde "-" olan veya saat formatı içeren veya yan yana iki kelime olan satırlar
+        let isScoreMatch = /\d+-\d+/.test(line);
+        let isTimeMatch = /\d{2}:\d{2}/.test(line);
+        let isErtelenen = line.includes("E-E") || line.includes("ERTELENEN");
 
-            // Eğer takım ismi boş kaldıysa veya sadece rakam/sembolse atla
-            if(teams.length < 2) continue;
-
-            // İY (İlk Yarı) Skorunu yakala (Bir sonraki satır sadece skor mu?)
+        if (isScoreMatch || isTimeMatch || isErtelenen) {
+            let score = "-";
             let iy = "-";
-            if (i + 1 < lines.length && /^\d+-\d+$/.test(lines[i+1])) {
-                iy = lines[i+1];
-                i++; // İY satırını kullandık, bir sonrakine geç
+            let teams = line;
+            let statusClass = "baslamadi";
+            let statusText = "SAAT";
+
+            if (isScoreMatch) {
+                let scoreMatch = line.match(/\d+-\d+/);
+                score = scoreMatch[0];
+                teams = line.split(score)[0].trim();
+                statusClass = "ms";
+                statusText = "MS";
+
+                // İY Skoru kontrolü
+                if (i + 1 < lines.length && /^\d+-\d+$/.test(lines[i+1].trim())) {
+                    iy = lines[i+1].trim();
+                    i++; 
+                }
+            } else if (isTimeMatch) {
+                let timeMatch = line.match(/\d{2}:\d{2}/);
+                statusText = timeMatch[0];
+                teams = line.split(timeMatch[0])[0].trim();
+                if(teams == "") teams = line.split(timeMatch[0])[1].trim();
+            } else if (isErtelenen) {
+                statusClass = "ert";
+                statusText = "ERT";
+                teams = line.replace("E-E", "").replace("ERTELENEN", "").trim();
             }
+
+            // Temizlik
+            teams = teams.replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/null/g, '').trim();
+            if(teams.length < 2) continue;
 
             tbody.innerHTML += `
                 <tr>
-                    <td><span class="ms-tag">MS</span></td>
+                    <td><span class="status-tag ${statusClass}">${statusText}</span></td>
                     <td>${teams}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${score}</span></td>
                     <td style="text-align:center; color:#888;">${iy}</td>
