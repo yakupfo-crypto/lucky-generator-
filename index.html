@@ -1,23 +1,67 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Lucky Generator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>Maç Sonucu Düzenleyici</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
+        textarea { width: 100%; height: 200px; border-radius: 8px; border: 1px solid #ccc; padding: 10px; }
+        button { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        .result-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        .result-table th, .result-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .lig-baslik { background: #333; color: white; font-weight: bold; }
+    </style>
 </head>
 <body>
 
-<h1>Lucky Generator</h1>
+    <h2>Karışık Maç Verisi Düzenleyici</h2>
+    <textarea id="rawInput" placeholder="Buraya kopyaladığın karışık metni yapıştır..."></textarea>
+    <button onclick="duzenle()">Listeyi Düzelt</button>
 
-<div id="generate">
-  <button onclick="generate()">Kolon Üret</button>
-</div>
+    <table class="result-table" id="outputTable">
+        <thead>
+            <tr>
+                <th>Maç / Lig</th>
+                <th>Sonuç</th>
+                <th>İY</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
 
-<div id="mysets" style="display:none">
-  <h2>My Sets</h2>
-  <div id="setsList"></div>
-</div>
+    <script>
+        function duzenle() {
+            const input = document.getElementById('rawInput').value;
+            const rows = input.split('\n');
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
 
-<script src="script.js"></script>
+            let currentLig = "";
+
+            rows.forEach((row, index) => {
+                let text = row.trim().replace(/[☆✩✰]/g, ''); // Yıldızları sil
+                
+                // LİG BAŞLIKLARINI YAKALA (Büyük harfle yazılan satırlar)
+                if (text === text.toUpperCase() && text.length > 3 && !text.includes('-') && !text.includes(':')) {
+                    currentLig = text;
+                    let tr = `<tr><td colspan="3" class="lig-baslik">${currentLig}</td></tr>`;
+                    tbody.innerHTML += tr;
+                }
+
+                // MAÇ SATIRINI YAKALA (İçinde " - " ve skor olanlar)
+                if (text.includes('-') && /\d-\d/.test(text)) {
+                    let nextRow = rows[index + 1] ? rows[index + 1].trim() : "";
+                    let iySkor = /\d-\d/.test(nextRow) && nextRow.length < 6 ? nextRow : "-";
+                    
+                    let tr = `<tr>
+                        <td>${text.split(/\d-\d/)[0]}</td>
+                        <td>${text.match(/\d-\d/)}</td>
+                        <td>${iySkor}</td>
+                    </tr>`;
+                    tbody.innerHTML += tr;
+                }
+            });
+        }
+    </script>
 </body>
 </html>
