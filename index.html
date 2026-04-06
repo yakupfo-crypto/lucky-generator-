@@ -2,66 +2,89 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Maç Sonucu Düzenleyici</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skor Düzenleyici PRO</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
-        textarea { width: 100%; height: 200px; border-radius: 8px; border: 1px solid #ccc; padding: 10px; }
-        button { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
-        .result-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
-        .result-table th, .result-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        .lig-baslik { background: #333; color: white; font-weight: bold; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 10px; }
+        .container { max-width: 900px; margin: auto; }
+        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; }
+        button { width: 100%; background: #00c853; color: black; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
+        th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
+        td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
+        .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
+        .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
+        .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
     </style>
 </head>
 <body>
 
-    <h2>Karışık Maç Verisi Düzenleyici</h2>
-    <textarea id="rawInput" placeholder="Buraya kopyaladığın karışık metni yapıştır..."></textarea>
-    <button onclick="duzenle()">Listeyi Düzelt</button>
+<div class="container">
+    <textarea id="rawInput" placeholder="Karışık metni buraya yapıştırın..."></textarea>
+    <button onclick="islemYap()">LİSTEYİ DÜZELT VE SIRALA</button>
 
-    <table class="result-table" id="outputTable">
+    <table>
         <thead>
             <tr>
-                <th>Maç / Lig</th>
-                <th>Sonuç</th>
-                <th>İY</th>
+                <th>DURUM</th>
+                <th>MAÇ</th>
+                <th style="text-align:center">MS</th>
+                <th style="text-align:center">İY</th>
             </tr>
         </thead>
-        <tbody id="tableBody"></tbody>
+        <tbody id="sonucAlani"></tbody>
     </table>
+</div>
 
-    <script>
-        function duzenle() {
-            const input = document.getElementById('rawInput').value;
-            const rows = input.split('\n');
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
+<script>
+function islemYap() {
+    const input = document.getElementById('rawInput').value;
+    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const tbody = document.getElementById('sonucAlani');
+    tbody.innerHTML = '';
 
-            let currentLig = "";
+    let currentLig = "";
 
-            rows.forEach((row, index) => {
-                let text = row.trim().replace(/[☆✩✰]/g, ''); // Yıldızları sil
-                
-                // LİG BAŞLIKLARINI YAKALA (Büyük harfle yazılan satırlar)
-                if (text === text.toUpperCase() && text.length > 3 && !text.includes('-') && !text.includes(':')) {
-                    currentLig = text;
-                    let tr = `<tr><td colspan="3" class="lig-baslik">${currentLig}</td></tr>`;
-                    tbody.innerHTML += tr;
-                }
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
 
-                // MAÇ SATIRINI YAKALA (İçinde " - " ve skor olanlar)
-                if (text.includes('-') && /\d-\d/.test(text)) {
-                    let nextRow = rows[index + 1] ? rows[index + 1].trim() : "";
-                    let iySkor = /\d-\d/.test(nextRow) && nextRow.length < 6 ? nextRow : "-";
-                    
-                    let tr = `<tr>
-                        <td>${text.split(/\d-\d/)[0]}</td>
-                        <td>${text.match(/\d-\d/)}</td>
-                        <td>${iySkor}</td>
-                    </tr>`;
-                    tbody.innerHTML += tr;
-                }
-            });
+        // 1. ADIM: LİGİ BUL (Büyük harf ve sayı içermeyen uzun satırlar)
+        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
+            currentLig = line;
+            tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
+            continue;
         }
-    </script>
+
+        // 2. ADIM: MAÇI BUL (İçinde skor olan satırlar)
+        if (/\d+-\d+/.test(line) && line.length > 5) {
+            let scoreMatch = line.match(/\d+-\d+/);
+            let score = scoreMatch[0];
+            let teams = line.split(score)[0].trim();
+            
+            // "MS" yazılarını ve yıldızları temizle
+            teams = teams.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+
+            // Eğer takım ismi boş kaldıysa veya sadece rakam/sembolse atla
+            if(teams.length < 2) continue;
+
+            // İY (İlk Yarı) Skorunu yakala (Bir sonraki satır sadece skor mu?)
+            let iy = "-";
+            if (i + 1 < lines.length && /^\d+-\d+$/.test(lines[i+1])) {
+                iy = lines[i+1];
+                i++; // İY satırını kullandık, bir sonrakine geç
+            }
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><span class="ms-tag">MS</span></td>
+                    <td>${teams}</td>
+                    <td style="text-align:center"><span class="skor-kutusu">${score}</span></td>
+                    <td style="text-align:center; color:#888;">${iy}</td>
+                </tr>`;
+        }
+    }
+}
+</script>
+
 </body>
 </html>
