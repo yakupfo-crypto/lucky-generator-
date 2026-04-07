@@ -55,44 +55,53 @@ function islemYap() {
             continue;
         }
 
-        // 2. ADIM: MAÇI BUL (Eksiksiz İsimler)
+        // 2. ADIM: MAÇI BUL
         if (/\d+-\d+/.test(line) && line.length > 5) {
-            let scoreMatch = line.match(/\d+-\d+/);
-            let score = scoreMatch[0];
+            let matches = line.match(/\d+-\d+/g); // Satırdaki tüm skorları bul
+            let msScore = matches[0]; // İlk skor her zaman Maç Sonucudur
+            let iyScore = "-";
+
+            // Eğer satırda ikinci bir skor varsa (Takım 2-1 Takım 1-0 gibi), o İY skorudur
+            if (matches.length > 1) {
+                iyScore = matches[matches.length - 1];
+            }
+
+            // Takım isimlerini ayırırken tüm skorları temizle
+            let tempLine = line;
+            matches.forEach(m => { tempLine = tempLine.replace(m, 'SPLIT_HERE'); });
             
-            let parts = line.split(score);
-            let homeTeam = parts[0].trim();
+            let parts = tempLine.split('SPLIT_HERE');
+            let homeTeam = parts[0] ? parts[0].trim() : "";
             let awayTeam = parts[1] ? parts[1].trim() : "";
-            
+
+            // Temizlik
             let cleanHome = homeTeam.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
             let cleanAway = awayTeam.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
 
-            let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
-
             if(cleanHome.length < 2) continue;
 
-            // --- İY SKORU YAKALAMA MANTIĞI GÜNCELLENDİ ---
-            let iy = "-";
-            // Maç satırından sonraki 3 satırı kontrol et (arada "MS" veya boşluk olabilir)
-            for (let j = 1; j <= 3; j++) {
-                if (i + j < lines.length) {
-                    let nextLine = lines[i + j].trim();
-                    // Eğer satır SADECE "0-0" veya "2-1" gibi bir skorsa
-                    if (/^\d+-\d+$/.test(nextLine)) {
-                        iy = nextLine;
-                        i = i + j; // Satır sayacını İY'nin bulunduğu yere kaydır
-                        break;
+            // Eğer satır içinde İY bulamadıysak, alt satırları kontrol et
+            if (iyScore === "-") {
+                for (let j = 1; j <= 3; j++) {
+                    if (i + j < lines.length) {
+                        let nextLine = lines[i + j].trim();
+                        if (/^\d+-\d+$/.test(nextLine)) {
+                            iyScore = nextLine;
+                            i = i + j;
+                            break;
+                        }
                     }
                 }
             }
-            // --------------------------------------------
+
+            let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
 
             tbody.innerHTML += `
                 <tr>
                     <td><span class="ms-tag">MS</span></td>
                     <td>${fullMatchName}</td>
-                    <td style="text-align:center"><span class="skor-kutusu">${score}</span></td>
-                    <td style="text-align:center; color:#888;">${iy}</td>
+                    <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
+                    <td style="text-align:center; color:#888;">${iyScore}</td>
                 </tr>`;
         }
     }
