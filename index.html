@@ -14,10 +14,7 @@
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
-        .status-tag { font-weight: bold; font-size: 10px; border: 1px solid; padding: 2px 4px; border-radius: 3px; text-transform: uppercase; min-width: 35px; display: inline-block; text-align: center; }
-        .ms { color: #00e676; border-color: #00e676; }
-        .ert { color: #ff5252; border-color: #ff5252; }
-        .baslamadi { color: #40c4ff; border-color: #40c4ff; }
+        .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -49,60 +46,44 @@ function islemYap() {
     let currentLig = "";
 
     for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].replace(/[☆✩✰]/g, '');
+        let line = lines[i];
 
-        // 1. LİG BAŞLIĞI TESPİTİ
-        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && 
-            !["MS", "ERTELENEN", "BAŞLAMAMIŞ", "BİTEN"].includes(line)) {
+        // 1. ADIM: LİGİ BUL
+        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // 2. MAÇ VE SKOR TESPİTİ
-        // İçinde en az bir harf olan ve "MS" veya rakam takısı olmayan satırları maç başlangıcı say
-        if (/[a-zA-Z]/.test(line) && !/^\d+ MS$/.test(line) && line.length > 3 && line !== "BAŞLAMAMIŞ" && line !== "ERTELENEN") {
+        // 2. ADIM: MAÇI BUL (Eksiksiz İsimler)
+        if (/\d+-\d+/.test(line) && line.length > 5) {
+            let scoreMatch = line.match(/\d+-\d+/);
+            let score = scoreMatch[0];
             
-            let teams = line;
-            let score = "-";
+            // Skoru merkez alarak solu (ev sahibi) ve sağı (deplasman) parçala
+            let parts = line.split(score);
+            let homeTeam = parts[0].trim();
+            let awayTeam = parts[1] ? parts[1].trim() : "";
+            
+            // Gereksiz MS, rakam ve yıldız temizliği
+            let cleanHome = homeTeam.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanAway = awayTeam.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+
+            let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
+
+            if(cleanHome.length < 2) continue;
+
+            // İY Skorunu yakala
             let iy = "-";
-            let statusText = "MS";
-            let statusClass = "ms";
-
-            // Skor satırın içindeyse ayır (Örn: Takım 2-1 Takım)
-            if (/\d+-\d+/.test(line)) {
-                let scoreMatch = line.match(/\d+-\d+/);
-                score = scoreMatch[0];
-                teams = line.split(score)[0].trim();
-                
-                // İY Skoru bir sonraki satırda mı?
-                if (i + 1 < lines.length && /^\d+-\d+$/.test(lines[i+1])) {
-                    iy = lines[i+1];
-                    i++;
-                }
-            } 
-            // Eğer skor yoksa ama bir sonraki satırda SAAT veya ERT varsa
-            else if (i + 1 < lines.length) {
-                let nextLine = lines[i+1];
-                if (/\d{2}:\d{2}/.test(nextLine)) {
-                    statusText = nextLine.match(/\d{2}:\d{2}/)[0];
-                    statusClass = "baslamadi";
-                    i++;
-                } else if (nextLine.includes("E-E") || nextLine.includes("Ert")) {
-                    statusText = "ERT";
-                    statusClass = "ert";
-                    i++;
-                }
+            if (i + 1 < lines.length && /^\d+-\d+$/.test(lines[i+1])) {
+                iy = lines[i+1];
+                i++;
             }
-
-            // Temizlik
-            teams = teams.replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/null/g, '').replace(/^\d+$/, '').trim();
-            if (teams.length < 3) continue;
 
             tbody.innerHTML += `
                 <tr>
-                    <td><span class="status-tag ${statusClass}">${statusText}</span></td>
-                    <td>${teams}</td>
+                    <td><span class="ms-tag">MS</span></td>
+                    <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${score}</span></td>
                     <td style="text-align:center; color:#888;">${iy}</td>
                 </tr>`;
