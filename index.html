@@ -55,17 +55,15 @@ function islemYap() {
             continue;
         }
 
-        // 2. ADIM: MAÇI BUL (Eksiksiz İsimler)
+        // 2. ADIM: MAÇI BUL
         if (/\d+-\d+/.test(line) && line.length > 5) {
             let scoreMatch = line.match(/\d+-\d+/);
             let score = scoreMatch[0];
             
-            // Skoru merkez alarak solu (ev sahibi) ve sağı (deplasman) parçala
             let parts = line.split(score);
             let homeTeam = parts[0].trim();
             let awayTeam = parts[1] ? parts[1].trim() : "";
             
-            // Gereksiz MS, rakam ve yıldız temizliği
             let cleanHome = homeTeam.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
             let cleanAway = awayTeam.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
 
@@ -73,11 +71,22 @@ function islemYap() {
 
             if(cleanHome.length < 2) continue;
 
-            // İY Skorunu yakala
+            // İY Skorunu Yakala (Sonraki 3 satırı kontrol eder)
             let iy = "-";
-            if (i + 1 < lines.length && /^\d+-\d+$/.test(lines[i+1])) {
-                iy = lines[i+1];
-                i++;
+            for (let j = 1; j <= 3; j++) {
+                if (i + j < lines.length) {
+                    let nextLine = lines[i + j].trim();
+                    // Eğer satır sadece "X-X" formatındaysa İY skoru budur
+                    if (/^\d+-\d+$/.test(nextLine)) {
+                        iy = nextLine;
+                        i = i + j; // Bu satırları işlenmiş sayıp atla
+                        break;
+                    }
+                    // Eğer yeni bir maça veya lige geçilmişse aramayı kes
+                    if (nextLine.length > 10 || (nextLine === nextLine.toUpperCase() && isNaN(nextLine.charAt(0)))) {
+                        break;
+                    }
+                }
             }
 
             tbody.innerHTML += `
