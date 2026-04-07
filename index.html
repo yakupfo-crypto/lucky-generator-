@@ -55,13 +55,13 @@ function islemYap() {
             continue;
         }
 
-        // 2. MAÇ VE SKOR TESPİTİ
-        if (/\d+-\d+/.test(line) && line.length > 3) {
-            let matches = line.match(/\d+-\d+/g); 
+        // 2. MAÇ VE SKOR TESPİTİ (Rakamlı skorlar veya E-E ibaresi)
+        if ((/\d+-\d+/.test(line) || /E-E/.test(line)) && line.length > 3) {
+            // Rakamlı skoru veya E-E ibaresini bulan yeni Regex
+            let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
 
-            // Eğer aynı satırda birden fazla skor varsa, sonuncuyu İY kabul et
             if (matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
@@ -80,16 +80,15 @@ function islemYap() {
             if(cleanHome.length < 2) continue;
 
             // --- GELİŞMİŞ İY TARAMA ---
-            // Eğer satır içinde İY bulamadıysak, sonraki 3 satıra bak
             if (iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
-                        // Satırda sadece skor varsa veya "İY 1-1" gibi bir yapı varsa
-                        let subMatch = nextLine.match(/^\d+-\d+$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
+                        // İY kısmında da E-E veya rakamlı skor ara
+                        let subMatch = nextLine.match(/^(\d+-\d+|E-E)$/) || nextLine.match(/^İY\s*(\d+-\d+|E-E)$/);
                         if (subMatch) {
-                            iyScore = Array.isArray(subMatch) ? (subMatch[1] || subMatch[0]) : subMatch;
-                            i = i + j; // İY satırını atla
+                            iyScore = subMatch[1] || subMatch[0];
+                            i = i + j;
                             break;
                         }
                     }
