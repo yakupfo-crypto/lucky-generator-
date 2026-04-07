@@ -55,18 +55,17 @@ function islemYap() {
             continue;
         }
 
-        // 2. MAÇ VE SKOR TESPİTİ (Sayısal skor veya E-E kontrolü eklendi)
+        // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
-            // Skorları veya E-E ifadesini yakala
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
 
-            if (matches.length > 1) {
+            // Eğer maç E-E ise İY her zaman "-" kalsın, değilse skor arasın
+            if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
 
-            // Takım isimlerini ayır
             let tempLine = line;
             matches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
             let parts = tempLine.split(' SPLIT ');
@@ -79,8 +78,8 @@ function islemYap() {
 
             if(cleanHome.length < 2) continue;
 
-            // Alt satırlarda sayısal skor veya E-E ara
-            if (iyScore === "-") {
+            // Alt satırlarda arama (Sadece maç E-E değilse yapılır)
+            if (msScore !== "E-E" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
@@ -93,6 +92,9 @@ function islemYap() {
                     }
                 }
             }
+            
+            // Son Güvenlik: Eğer maç E-E ise İY kısmını zorla temizle
+            if (msScore === "E-E") iyScore = "-";
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
 
