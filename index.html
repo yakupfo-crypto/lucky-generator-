@@ -55,7 +55,7 @@ function islemYap() {
             continue;
         }
 
-        // 2. ADIM: MAÇI BUL
+        // 2. ADIM: MAÇI BUL (Eksiksiz İsimler)
         if (/\d+-\d+/.test(line) && line.length > 5) {
             let scoreMatch = line.match(/\d+-\d+/);
             let score = scoreMatch[0];
@@ -71,23 +71,21 @@ function islemYap() {
 
             if(cleanHome.length < 2) continue;
 
-            // İY Skorunu Yakala (Sonraki 3 satırı kontrol eder)
+            // --- İY SKORU YAKALAMA MANTIĞI GÜNCELLENDİ ---
             let iy = "-";
+            // Maç satırından sonraki 3 satırı kontrol et (arada "MS" veya boşluk olabilir)
             for (let j = 1; j <= 3; j++) {
                 if (i + j < lines.length) {
                     let nextLine = lines[i + j].trim();
-                    // Eğer satır sadece "X-X" formatındaysa İY skoru budur
+                    // Eğer satır SADECE "0-0" veya "2-1" gibi bir skorsa
                     if (/^\d+-\d+$/.test(nextLine)) {
                         iy = nextLine;
-                        i = i + j; // Bu satırları işlenmiş sayıp atla
-                        break;
-                    }
-                    // Eğer yeni bir maça veya lige geçilmişse aramayı kes
-                    if (nextLine.length > 10 || (nextLine === nextLine.toUpperCase() && isNaN(nextLine.charAt(0)))) {
+                        i = i + j; // Satır sayacını İY'nin bulunduğu yere kaydır
                         break;
                     }
                 }
             }
+            // --------------------------------------------
 
             tbody.innerHTML += `
                 <tr>
