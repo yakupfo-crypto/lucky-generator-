@@ -48,46 +48,48 @@ function islemYap() {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        // 1. ADIM: LİGİ BUL
+        // 1. LİG TESPİTİ
         if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // 2. ADIM: MAÇI BUL
-        if (/\d+-\d+/.test(line) && line.length > 5) {
-            let matches = line.match(/\d+-\d+/g); // Satırdaki tüm skorları bul
-            let msScore = matches[0]; // İlk skor her zaman Maç Sonucudur
+        // 2. MAÇ VE SKOR TESPİTİ
+        if (/\d+-\d+/.test(line) && line.length > 3) {
+            let matches = line.match(/\d+-\d+/g); 
+            let msScore = matches[0]; 
             let iyScore = "-";
 
-            // Eğer satırda ikinci bir skor varsa (Takım 2-1 Takım 1-0 gibi), o İY skorudur
+            // Eğer aynı satırda birden fazla skor varsa, sonuncuyu İY kabul et
             if (matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
 
-            // Takım isimlerini ayırırken tüm skorları temizle
+            // Takım isimlerini temizle
             let tempLine = line;
-            matches.forEach(m => { tempLine = tempLine.replace(m, 'SPLIT_HERE'); });
+            matches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
+            let parts = tempLine.split(' SPLIT ');
             
-            let parts = tempLine.split('SPLIT_HERE');
-            let homeTeam = parts[0] ? parts[0].trim() : "";
-            let awayTeam = parts[1] ? parts[1].trim() : "";
+            let home = parts[0] ? parts[0].trim() : "";
+            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            // Temizlik
-            let cleanHome = homeTeam.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
-            let cleanAway = awayTeam.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
-            // Eğer satır içinde İY bulamadıysak, alt satırları kontrol et
+            // --- GELİŞMİŞ İY TARAMA ---
+            // Eğer satır içinde İY bulamadıysak, sonraki 3 satıra bak
             if (iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
-                        if (/^\d+-\d+$/.test(nextLine)) {
-                            iyScore = nextLine;
-                            i = i + j;
+                        // Satırda sadece skor varsa veya "İY 1-1" gibi bir yapı varsa
+                        let subMatch = nextLine.match(/^\d+-\d+$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
+                        if (subMatch) {
+                            iyScore = Array.isArray(subMatch) ? (subMatch[1] || subMatch[0]) : subMatch;
+                            i = i + j; // İY satırını atla
                             break;
                         }
                     }
