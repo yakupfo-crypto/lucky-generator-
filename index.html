@@ -14,6 +14,7 @@
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
+        /* ms-tag stili artık kullanılmıyor, isteğe bağlı tutulabilir */
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
     </style>
 </head>
@@ -56,19 +57,15 @@ function islemYap() {
         }
 
         // 2. MAÇ VE SKOR TESPİTİ
-        // Satırda skor veya E-E var mı?
-        const scoreRegex = /\d+-\d+|E-E/g;
-        if (scoreRegex.test(line) && line.length > 3) {
-            let matches = line.match(scoreRegex); 
+        if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
+            let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
 
-            // Eğer aynı satırda birden fazla skor varsa, ikincisi İY'dir
-            if (matches.length > 1) {
-                iyScore = matches[1];
+            if (msScore !== "E-E" && matches.length > 1) {
+                iyScore = matches[matches.length - 1];
             }
 
-            // Takım isimlerini temizle (Skorları ayıklayarak)
             let tempLine = line;
             matches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
             let parts = tempLine.split(' SPLIT ');
@@ -81,36 +78,28 @@ function islemYap() {
 
             if(cleanHome.length < 2) continue;
 
-            // --- GELİŞMİŞ İY TARAMA ---
-            // Eğer ana satırda İY bulunamadıysa ve maç ertelenmemişse alt satırlara bak
             if (msScore !== "E-E" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
-                        // Alt satırda sadece skor mu var veya İY 1-1 şeklinde mi?
-                        let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
-                        
+                        let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^E-E$/) || nextLine.match(/^İY\s*(\d+-\d+|E-E)$/);
                         if (subMatch) {
                             iyScore = subMatch[1] || subMatch[0];
-                            // Eğer bu satırı İY olarak kullandıysak, ana döngüde orayı atlamalıyız
-                            // Ancak satır başka bir maçın ismi olmamalı (harf kontrolü)
-                            if (!/[a-zA-Z]{5,}/.test(nextLine)) {
-                                i = i + j;
-                            }
+                            i = i + j;
                             break;
                         }
                     }
                 }
             }
             
-            // Ertelenen maç kontrolü
             if (msScore === "E-E") iyScore = "-";
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
 
+            // BURADA MS ETİKETİNİ KALDIRDIM:
             tbody.innerHTML += `
                 <tr>
-                    <td><span class="ms-tag">MS</span></td>
+                    <td></td>
                     <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
                     <td style="text-align:center; color:#888;">${iyScore}</td>
