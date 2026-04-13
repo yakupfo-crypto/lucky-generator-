@@ -61,7 +61,7 @@ function islemYap() {
             let msScore = matches[0]; 
             let iyScore = "-";
 
-            // Eğer maç E-E ise İY her zaman "-" kalsın, değilse skor arasın
+            // Aynı satırda birden fazla skor varsa sonuncusu İY'dir
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
@@ -78,22 +78,27 @@ function islemYap() {
 
             if(cleanHome.length < 2) continue;
 
-            // Alt satırlarda arama (Sadece maç E-E değilse yapılır)
+            // İY SKORU HALA BULUNAMADIYSA ALT SATIRLARI DAHA DERİN TARAMA
             if (msScore !== "E-E" && iyScore === "-") {
-                for (let j = 1; j <= 3; j++) {
+                // j=1'den başlayarak sonraki satırlara bak, ancak başka bir maça geçmediğinden emin ol
+                for (let j = 1; j <= 4; j++) { 
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
-                        let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^E-E$/) || nextLine.match(/^İY\s*(\d+-\d+|E-E)$/);
+                        
+                        // Eğer sonraki satır yeni bir lig veya yeni bir maç satırıysa aramayı durdur
+                        if (nextLine === nextLine.toUpperCase() && !nextLine.includes('-') && isNaN(nextLine.charAt(0))) break;
+                        
+                        let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
                         if (subMatch) {
                             iyScore = subMatch[1] || subMatch[0];
-                            i = i + j;
+                            // İY skorunu bulduğumuz satırı tüketmiş saymıyoruz (i=i+j yapmıyoruz) 
+                            // çünkü bazen OCR verisi çok karışık gelebiliyor. Sadece skoru alıyoruz.
                             break;
                         }
                     }
                 }
             }
             
-            // Son Güvenlik: Eğer maç E-E ise İY kısmını zorla temizle
             if (msScore === "E-E") iyScore = "-";
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
