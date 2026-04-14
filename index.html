@@ -60,12 +60,19 @@ function islemYap() {
         // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
             
-            // DRD KONTROLÜ (Hem bir önceki hem bir sonraki satıra bakarak doğruluk payını artırıyoruz)
+            // DRD KONTROLÜ: Maçın üstündeki satırlarda (en fazla 5 satır) Drd ibaresi var mı?
             let isDrd = false;
-            if (i > 0 && lines[i-1].toUpperCase() === "DRD") isDrd = true;
-            if (i < lines.length - 1 && lines[i+1].toUpperCase() === "DRD") isDrd = true;
-            // Satırın kendi içinde "Drd" geçiyorsa
-            if (line.toUpperCase().includes("DRD")) isDrd = true;
+            for (let k = 1; k <= 5; k++) {
+                if (i - k >= 0) {
+                    let prevLine = lines[i - k].toUpperCase();
+                    if (prevLine === "DRD") {
+                        isDrd = true;
+                        break;
+                    }
+                    // Eğer araya başka bir maç veya lig girdiyse aramayı kes
+                    if (/\d+-\d+/.test(prevLine) || (prevLine === prevLine.toUpperCase() && prevLine.length > 3 && !prevLine.includes("MS"))) break;
+                }
+            }
 
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
