@@ -15,8 +15,7 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
-        .drd-tag { color: #03a9f4; border-color: #03a9f4; } /* Drd için mavi etiket */
+        .ert-tag { color: #ff9800; border-color: #ff9800; } 
     </style>
 </head>
 <body>
@@ -59,11 +58,12 @@ function islemYap() {
 
         // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
-            let statusTag = "MS";
-            
-            // Satırda Drd var mı kontrol et
-            if (line.includes("Drd")) {
-                statusTag = "Drd";
+            // Orijinal durum metnini yakalamaya çalış (MS veya E-E gibi ibareler)
+            let originalStatus = "MS";
+            if (line.includes("E-E")) originalStatus = "E-E";
+            else {
+                let statusMatch = line.match(/(MS|İY|İMS|UZ|PEN)/);
+                if (statusMatch) originalStatus = statusMatch[0];
             }
 
             let matches = line.match(/\d+-\d+|E-E/g); 
@@ -79,11 +79,10 @@ function islemYap() {
             let parts = tempLine.split(' SPLIT ');
             
             let home = parts[0] ? parts[0].trim() : "";
-            let away = (parts[1] && parts[1].trim() !== "MS" && parts[1].trim() !== "Drd") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
+            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            // Temizlik (MS ve Drd kelimelerini takım isminden at)
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
@@ -107,19 +106,15 @@ function islemYap() {
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
-                statusTag = "ERT"; 
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
-            
-            // Etiket sınıfını belirle
-            let tagClass = "ms-tag";
-            if (statusTag === "ERT") tagClass += " ert-tag";
-            if (statusTag === "Drd") tagClass += " drd-tag";
+            // Eğer durum E-E ise ertelenmiş stili uygula, değilse normal MS stili
+            let tagClass = originalStatus.includes("E-E") ? "ms-tag ert-tag" : "ms-tag";
 
             tbody.innerHTML += `
                 <tr>
-                    <td><span class="${tagClass}">${statusTag}</span></td>
+                    <td><span class="${tagClass}">${originalStatus}</span></td>
                     <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${displayMS}</span></td>
                     <td style="text-align:center; color:#888;">${displayIY}</td>
