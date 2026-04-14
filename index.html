@@ -60,11 +60,12 @@ function islemYap() {
         // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
             
-            // DRD KONTROLÜ (Bir önceki satıra bakıyoruz)
+            // DRD KONTROLÜ (Hem bir önceki hem bir sonraki satıra bakarak doğruluk payını artırıyoruz)
             let isDrd = false;
-            if (i > 0 && lines[i-1].toUpperCase().includes("DRD")) {
-                isDrd = true;
-            }
+            if (i > 0 && lines[i-1].toUpperCase() === "DRD") isDrd = true;
+            if (i < lines.length - 1 && lines[i+1].toUpperCase() === "DRD") isDrd = true;
+            // Satırın kendi içinde "Drd" geçiyorsa
+            if (line.toUpperCase().includes("DRD")) isDrd = true;
 
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
@@ -112,7 +113,6 @@ function islemYap() {
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
             
-            // Tag sınıfı belirleme
             let tagClass = "ms-tag";
             if (statusTag === "ERT") tagClass += " ert-tag";
             if (statusTag === "Drd") tagClass += " drd-tag";
