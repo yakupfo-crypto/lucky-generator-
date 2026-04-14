@@ -15,6 +15,7 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
+        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
     </style>
 </head>
 <body>
@@ -60,8 +61,8 @@ function islemYap() {
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
+            let statusTag = "MS"; // Varsayılan etiket
 
-            // Eğer maç E-E değilse normal iyScore atamasını yap
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
@@ -78,7 +79,6 @@ function islemYap() {
 
             if(cleanHome.length < 2) continue;
 
-            // Alt satırlarda arama (Sadece maç E-E değilse yapılır)
             if (msScore !== "E-E" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
@@ -100,13 +100,15 @@ function islemYap() {
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
+                statusTag = "ERT"; // Etiketi ERT yap
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
+            let tagClass = statusTag === "ERT" ? "ms-tag ert-tag" : "ms-tag";
 
             tbody.innerHTML += `
                 <tr>
-                    <td><span class="ms-tag">MS</span></td>
+                    <td><span class="${tagClass}">${statusTag}</span></td>
                     <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${displayMS}</span></td>
                     <td style="text-align:center; color:#888;">${displayIY}</td>
