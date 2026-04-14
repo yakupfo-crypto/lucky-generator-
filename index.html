@@ -59,15 +59,16 @@ function islemYap() {
 
         // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
-            let matches = line.match(/\d+-\d+|E-E/g); 
-            let msScore = matches[0]; 
-            let iyScore = "-";
-            let statusTag = "MS"; // Varsayılan etiket
-
-            // EĞER SATIRDA Drd VARSA ETİKETİ GÜNCELLE
+            let statusTag = "MS";
+            
+            // Satırda Drd var mı kontrol et
             if (line.includes("Drd")) {
                 statusTag = "Drd";
             }
+
+            let matches = line.match(/\d+-\d+|E-E/g); 
+            let msScore = matches[0]; 
+            let iyScore = "-";
 
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
@@ -80,6 +81,7 @@ function islemYap() {
             let home = parts[0] ? parts[0].trim() : "";
             let away = (parts[1] && parts[1].trim() !== "MS" && parts[1].trim() !== "Drd") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
+            // Temizlik (MS ve Drd kelimelerini takım isminden at)
             let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
             let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
 
@@ -99,7 +101,6 @@ function islemYap() {
                 }
             }
             
-            // E-E DURUMU ÖZEL DÜZENLEME:
             let displayMS = msScore;
             let displayIY = iyScore;
             
@@ -111,7 +112,7 @@ function islemYap() {
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
             
-            // Etiket rengini belirle
+            // Etiket sınıfını belirle
             let tagClass = "ms-tag";
             if (statusTag === "ERT") tagClass += " ert-tag";
             if (statusTag === "Drd") tagClass += " drd-tag";
