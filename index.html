@@ -14,8 +14,8 @@
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
-        .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; } 
+        .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; white-space: nowrap; }
+        .ert-tag { color: #ff9800; border-color: #ff9800; }
     </style>
 </head>
 <body>
@@ -58,17 +58,14 @@ function islemYap() {
 
         // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
-            // Orijinal durum metnini yakalamaya çalış (MS veya E-E gibi ibareler)
-            let originalStatus = "MS";
-            if (line.includes("E-E")) originalStatus = "E-E";
-            else {
-                let statusMatch = line.match(/(MS|İY|İMS|UZ|PEN)/);
-                if (statusMatch) originalStatus = statusMatch[0];
-            }
-
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
+            
+            // Orijinal satırdaki durum metnini çekme (MS, BİTTİ, Dakika vb.)
+            // Skorları ve Takım isimlerini ayıklarken kalan durum bilgisini yakalar
+            let statusText = line.match(/\b\d+'\s*MS\b|\bMS\b|\bBİTTİ\b|\bERT\b|\bİPT\b/i);
+            let displayStatus = statusText ? statusText[0] : "MS";
 
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
@@ -81,8 +78,9 @@ function islemYap() {
             let home = parts[0] ? parts[0].trim() : "";
             let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            // Durum metnini takım isimlerinden temizle
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\b\d+'\s*MS\b|\bMS\b|\bBİTTİ\b/gi, '').replace(/\d+\sMS/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\b\d+'\s*MS\b|\bMS\b|\bBİTTİ\b/gi, '').replace(/\d+\sMS/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
@@ -100,21 +98,22 @@ function islemYap() {
                 }
             }
             
+            // E-E DURUMU ÖZEL DÜZENLEME:
             let displayMS = msScore;
             let displayIY = iyScore;
             
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
+                displayStatus = "ERT"; 
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
-            // Eğer durum E-E ise ertelenmiş stili uygula, değilse normal MS stili
-            let tagClass = originalStatus.includes("E-E") ? "ms-tag ert-tag" : "ms-tag";
+            let tagClass = (displayStatus.includes("ERT") || displayStatus.includes("E")) ? "ms-tag ert-tag" : "ms-tag";
 
             tbody.innerHTML += `
                 <tr>
-                    <td><span class="${tagClass}">${originalStatus}</span></td>
+                    <td><span class="${tagClass}">${displayStatus}</span></td>
                     <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${displayMS}</span></td>
                     <td style="text-align:center; color:#888;">${displayIY}</td>
