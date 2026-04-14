@@ -15,8 +15,8 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
-        .drd-text { color: #ff5252; font-size: 12px; margin-left: 5px; font-weight: bold; }
+        .ert-tag { color: #ff9800; border-color: #ff9800; }
+        .drd-yazi { color: #ff5252; font-size: 11px; margin-left: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -50,20 +50,20 @@ function islemYap() {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        // 1. LİG TESPİTİ
         if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
+            // "Drd" kontrolü (Maçın orijinal satırında var mı?)
+            let isDrd = line.includes("Drd");
+            
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
-            let statusTag = "MS"; 
-            let drdSuffix = line.includes("Drd") ? '<span class="drd-text">Drd</span>' : '';
+            let statusTag = "MS";
 
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
@@ -95,25 +95,27 @@ function islemYap() {
                 }
             }
             
-            // E-E DURUMU ÖZEL DÜZENLEME:
             let displayMS = msScore;
             let displayIY = iyScore;
             
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
-                statusTag = "ERT"; 
+                statusTag = "ERT";
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
             let tagClass = statusTag === "ERT" ? "ms-tag ert-tag" : "ms-tag";
+            
+            // Eğer maç Drd ise skorun yanına Drd yazısı ekle
+            let drdHtml = isDrd ? `<span class="drd-yazi">Drd</span>` : "";
 
             tbody.innerHTML += `
                 <tr>
                     <td><span class="${tagClass}">${statusTag}</span></td>
                     <td>${fullMatchName}</td>
                     <td style="text-align:center">
-                        <span class="skor-kutusu">${displayMS}</span>${drdSuffix}
+                        <span class="skor-kutusu">${displayMS}</span>${drdHtml}
                     </td>
                     <td style="text-align:center; color:#888;">${displayIY}</td>
                 </tr>`;
