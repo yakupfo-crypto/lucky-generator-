@@ -15,8 +15,8 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; }
-        .drd-tag { color: #f44336; border-color: #f44336; } /* Durdurulan maçlar için kırmızı etiket */
+        .ert-tag { color: #ff9800; border-color: #ff9800; } 
+        .drd-tag { color: #00bcd4; border-color: #00bcd4; } /* Drd için özel renk */
     </style>
 </head>
 <body>
@@ -50,26 +50,28 @@ function islemYap() {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
+        // 1. LİG TESPİTİ
+        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS") && !line.includes("DRD")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // Skor Tespiti (Sayı-Sayı, E-E veya Drd kontrolü eklendi)
-        if ((/\d+-\d+/.test(line) || line.includes("E-E") || line.includes("Drd")) && line.length > 3) {
+        // 2. MAÇ VE SKOR TESPİTİ
+        if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
             
-            // Eğer satırda sadece Drd yazıyorsa bir önceki satırdaki maçı etkiliyor olabilir
-            // Bu yüzden "Drd" kelimesini de bir skor gibi eşleştiriyoruz
-            let matches = line.match(/\d+-\d+|E-E|Drd/g); 
+            // DRD KONTROLÜ (Bir önceki satıra bakıyoruz)
+            let isDrd = false;
+            if (i > 0 && lines[i-1].toUpperCase().includes("DRD")) {
+                isDrd = true;
+            }
+
+            let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
-            let statusTag = "MS";
+            let statusTag = isDrd ? "Drd" : "MS"; 
 
-            // Drd satırın başındaysa veya içindeyse kontrol et
-            let isDrd = line.includes("Drd");
-
-            if (!isDrd && msScore !== "E-E" && matches.length > 1) {
+            if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
 
@@ -78,15 +80,14 @@ function islemYap() {
             let parts = tempLine.split(' SPLIT ');
             
             let home = parts[0] ? parts[0].trim() : "";
-            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
+            let away = (parts[1] && parts[1].trim() !== "MS" && parts[1].trim() !== "DRD") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/DRD/gi, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/DRD/gi, '').trim();
 
-            if(cleanHome.length < 2 && !isDrd) continue;
+            if(cleanHome.length < 2) continue;
 
-            // Alt satırlarda İY skor araması
-            if (!isDrd && msScore !== "E-E" && iyScore === "-") {
+            if (msScore !== "E-E" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
@@ -102,21 +103,19 @@ function islemYap() {
             
             let displayMS = msScore;
             let displayIY = iyScore;
-            let tagClass = "ms-tag";
-
+            
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
-                statusTag = "ERT";
-                tagClass = "ms-tag ert-tag";
-            } else if (isDrd) {
-                statusTag = "DRD";
-                tagClass = "ms-tag drd-tag";
-                // Eğer maç Drd ise ve skor varsa onu MS kutusuna koy
-                displayMS = line.match(/\d+-\d+/) ? line.match(/\d+-\d+/)[0] : "-";
+                statusTag = "ERT"; 
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
+            
+            // Tag sınıfı belirleme
+            let tagClass = "ms-tag";
+            if (statusTag === "ERT") tagClass += " ert-tag";
+            if (statusTag === "Drd") tagClass += " drd-tag";
 
             tbody.innerHTML += `
                 <tr>
