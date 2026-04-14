@@ -15,7 +15,8 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler veya Drd için turuncu etiket */
+        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
+        .drd-tag { color: #f44336; border-color: #f44336; } /* Durdurulanlar için kırmızı etiket */
     </style>
 </head>
 <body>
@@ -56,37 +57,30 @@ function islemYap() {
             continue;
         }
 
-        // 2. MAÇ VE SKOR TESPİTİ
+        // 2. MAÇ VE SKOR TESPİTİ (Drd kontrolü eklendi)
         if ((/\d+-\d+/.test(line) || line.includes("E-E") || line.includes("Drd")) && line.length > 3) {
-            let matches = line.match(/\d+-\d+|E-E/g) || ["-"]; 
+            let matches = line.match(/\d+-\d+|E-E|Drd/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
-            let statusTag = "MS";
+            let statusTag = "MS"; // Varsayılan etiket
 
-            // Drd kontrolü
-            if (line.includes("Drd")) {
-                statusTag = "Drd";
-            }
-
-            if (msScore !== "E-E" && matches.length > 1) {
+            if (msScore !== "E-E" && msScore !== "Drd" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
 
             let tempLine = line;
-            if(matches[0] !== "-") {
-                matches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
-            }
+            matches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
             let parts = tempLine.split(' SPLIT ');
             
             let home = parts[0] ? parts[0].trim() : "";
-            let away = (parts[1] && parts[1].trim() !== "MS" && parts[1].trim() !== "Drd") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
+            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
-            if (msScore !== "E-E" && iyScore === "-") {
+            if (msScore !== "E-E" && msScore !== "Drd" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
@@ -100,18 +94,24 @@ function islemYap() {
                 }
             }
             
+            // DURUM ÖZEL DÜZENLEMELERİ:
             let displayMS = msScore;
             let displayIY = iyScore;
+            let tagClass = "ms-tag";
             
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
                 statusTag = "ERT";
+                tagClass = "ms-tag ert-tag";
+            } else if (msScore === "Drd") {
+                displayMS = "Drd";
+                displayIY = "-"; // Durdurulan maçta genelde İY skoru gelmez
+                statusTag = "Drd";
+                tagClass = "ms-tag drd-tag";
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
-            // ERT ve Drd için farklı görsel stil
-            let tagClass = (statusTag === "ERT" || statusTag === "Drd") ? "ms-tag ert-tag" : "ms-tag";
 
             tbody.innerHTML += `
                 <tr>
