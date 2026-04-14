@@ -61,7 +61,7 @@ function islemYap() {
             let msScore = matches[0]; 
             let iyScore = "-";
 
-            // Eğer maç E-E ise İY her zaman "-" kalsın, değilse skor arasın
+            // Eğer maç E-E değilse normal iyScore atamasını yap
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
@@ -93,8 +93,14 @@ function islemYap() {
                 }
             }
             
-            // Son Güvenlik: Eğer maç E-E ise İY kısmını zorla temizle
-            if (msScore === "E-E") iyScore = "-";
+            // E-E DURUMU ÖZEL DÜZENLEME:
+            let displayMS = msScore;
+            let displayIY = iyScore;
+            
+            if (msScore === "E-E") {
+                displayMS = "E";
+                displayIY = "E";
+            }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
 
@@ -102,8 +108,8 @@ function islemYap() {
                 <tr>
                     <td><span class="ms-tag">MS</span></td>
                     <td>${fullMatchName}</td>
-                    <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
-                    <td style="text-align:center; color:#888;">${iyScore}</td>
+                    <td style="text-align:center"><span class="skor-kutusu">${displayMS}</span></td>
+                    <td style="text-align:center; color:#888;">${displayIY}</td>
                 </tr>`;
         }
     }
