@@ -14,7 +14,6 @@
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
-        /* ms-tag stili artık kullanılmıyor, isteğe bağlı tutulabilir */
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
     </style>
 </head>
@@ -62,6 +61,7 @@ function islemYap() {
             let msScore = matches[0]; 
             let iyScore = "-";
 
+            // Eğer maç E-E ise İY her zaman "-" kalsın, değilse skor arasın
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
@@ -78,6 +78,7 @@ function islemYap() {
 
             if(cleanHome.length < 2) continue;
 
+            // Alt satırlarda arama (Sadece maç E-E değilse yapılır)
             if (msScore !== "E-E" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
@@ -92,14 +93,14 @@ function islemYap() {
                 }
             }
             
+            // Son Güvenlik: Eğer maç E-E ise İY kısmını zorla temizle
             if (msScore === "E-E") iyScore = "-";
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
 
-            // BURADA MS ETİKETİNİ KALDIRDIM:
             tbody.innerHTML += `
                 <tr>
-                    <td></td>
+                    <td><span class="ms-tag">MS</span></td>
                     <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
                     <td style="text-align:center; color:#888;">${iyScore}</td>
