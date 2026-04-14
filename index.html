@@ -15,8 +15,8 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
-        .drd-tag { color: #f44336; border-color: #f44336; } /* Durdurulanlar için kırmızı etiket */
+        .ert-tag { color: #ff9800; border-color: #ff9800; } 
+        .drd-tag { color: #2196f3; border-color: #2196f3; } /* Durdurulanlar için mavi etiket */
     </style>
 </head>
 <body>
@@ -50,21 +50,24 @@ function islemYap() {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        // 1. LİG TESPİTİ
         if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // 2. MAÇ VE SKOR TESPİTİ (Drd kontrolü eklendi)
-        if ((/\d+-\d+/.test(line) || line.includes("E-E") || line.includes("Drd")) && line.length > 3) {
-            let matches = line.match(/\d+-\d+|E-E|Drd/g); 
+        if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
+            let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
-            let statusTag = "MS"; // Varsayılan etiket
+            let statusTag = "MS";
 
-            if (msScore !== "E-E" && msScore !== "Drd" && matches.length > 1) {
+            // Orijinal satırda Drd geçiyor mu kontrol et
+            if (line.includes("Drd")) {
+                statusTag = "Drd";
+            }
+
+            if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
 
@@ -75,12 +78,12 @@ function islemYap() {
             let home = parts[0] ? parts[0].trim() : "";
             let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
-            if (msScore !== "E-E" && msScore !== "Drd" && iyScore === "-") {
+            if (msScore !== "E-E" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
@@ -94,24 +97,21 @@ function islemYap() {
                 }
             }
             
-            // DURUM ÖZEL DÜZENLEMELERİ:
             let displayMS = msScore;
             let displayIY = iyScore;
-            let tagClass = "ms-tag";
             
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
                 statusTag = "ERT";
-                tagClass = "ms-tag ert-tag";
-            } else if (msScore === "Drd") {
-                displayMS = "Drd";
-                displayIY = "-"; // Durdurulan maçta genelde İY skoru gelmez
-                statusTag = "Drd";
-                tagClass = "ms-tag drd-tag";
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
+            
+            // Etiket sınıfını belirle
+            let tagClass = "ms-tag";
+            if (statusTag === "ERT") tagClass += " ert-tag";
+            if (statusTag === "Drd") tagClass += " drd-tag";
 
             tbody.innerHTML += `
                 <tr>
