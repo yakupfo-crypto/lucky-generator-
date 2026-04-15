@@ -15,8 +15,7 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; }
-        .drd-metin { color: #00bcd4; font-weight: bold; font-size: 12px; } /* MS-İY arası Drd stili */
+        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
     </style>
 </head>
 <body>
@@ -31,7 +30,7 @@
                 <th>DURUM</th>
                 <th>MAÇ</th>
                 <th style="text-align:center">MS</th>
-                <th style="text-align:center"></th> <th style="text-align:center">İY</th>
+                <th style="text-align:center">İY</th>
             </tr>
         </thead>
         <tbody id="sonucAlani"></tbody>
@@ -46,33 +45,27 @@ function islemYap() {
     tbody.innerHTML = '';
 
     let currentLig = "";
-    let nextMatchIsDrd = false;
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        if (line.toUpperCase() === "DRD") {
-            nextMatchIsDrd = true;
-            continue;
-        }
-
-        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS") && !line.includes("DRD")) {
+        // 1. LİG TESPİTİ
+        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
-            tbody.innerHTML += `<tr><td colspan="5" class="lig-baslik">${currentLig}</td></tr>`;
+            tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
+        // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
-            
-            let statusTag = "MS";
-            let drdDisplay = ""; // Orta kısım için değişken
+            let statusTag = "MS"; // Varsayılan etiket
 
-            if (nextMatchIsDrd) {
-                drdDisplay = "Drd";
-                nextMatchIsDrd = false;
+            // Drd kontrolü: Satırda "Drd" geçiyorsa etiketi Drd yap
+            if (line.includes("Drd")) {
+                statusTag = "Drd";
             }
 
             if (msScore !== "E-E" && matches.length > 1) {
@@ -84,10 +77,10 @@ function islemYap() {
             let parts = tempLine.split(' SPLIT ');
             
             let home = parts[0] ? parts[0].trim() : "";
-            let away = (parts[1] && parts[1].trim() !== "MS" && parts[1].trim() !== "DRD") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
+            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/DRD/gi, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/DRD/gi, '').trim();
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
@@ -105,13 +98,14 @@ function islemYap() {
                 }
             }
             
+            // E-E DURUMU ÖZEL DÜZENLEME:
             let displayMS = msScore;
             let displayIY = iyScore;
             
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
-                statusTag = "ERT"; 
+                statusTag = "ERT"; // Etiketi ERT yap
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
@@ -122,7 +116,6 @@ function islemYap() {
                     <td><span class="${tagClass}">${statusTag}</span></td>
                     <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${displayMS}</span></td>
-                    <td style="text-align:center"><span class="drd-metin">${drdDisplay}</span></td>
                     <td style="text-align:center; color:#888;">${displayIY}</td>
                 </tr>`;
         }
