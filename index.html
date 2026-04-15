@@ -16,7 +16,7 @@
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
         .ert-tag { color: #ff9800; border-color: #ff9800; } 
-        .drd-tag { color: #ff5252; border-color: #ff5252; } /* Drd için kırmızımsı ton */
+        .drd-tag { color: #00bcd4; border-color: #00bcd4; }
     </style>
 </head>
 <body>
@@ -60,14 +60,17 @@ function islemYap() {
         // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
             
-            // DRD Kontrolü: Maçın üstündeki 5 satırda "Drd" geçiyor mu?
+            // DRD KONTROLÜ (Geriye dönük satırlarda Drd ibaresini arar)
             let isDrd = false;
-            for (let k = 1; k <= 5; k++) {
+            for (let k = 1; k <= 3; k++) {
                 if (i - k >= 0) {
-                    if (lines[i-k].toUpperCase() === "DRD") {
+                    let prevLine = lines[i - k].toUpperCase();
+                    if (prevLine === "DRD") {
                         isDrd = true;
                         break;
                     }
+                    // Eğer araya başka bir maç veya lig girdiyse aramayı kes
+                    if (/\d+-\d+/.test(lines[i-k]) || (lines[i-k] === lines[i-k].toUpperCase() && lines[i-k].length > 3)) break;
                 }
             }
 
