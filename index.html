@@ -15,7 +15,8 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
+        .ert-tag { color: #ff9800; border-color: #ff9800; }
+        .drd-text { color: #00e676; font-weight: bold; margin: 0 5px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -49,19 +50,20 @@ function islemYap() {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        // 1. LİG TESPİTİ
         if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
-            let statusTag = "MS"; // Varsayılan etiket
+            let statusTag = "MS";
+
+            // Drd kontrolü
+            let drdEkle = line.includes("Drd") ? '<span class="drd-text">Drd</span>' : '';
 
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
@@ -74,8 +76,8 @@ function islemYap() {
             let home = parts[0] ? parts[0].trim() : "";
             let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
@@ -86,6 +88,8 @@ function islemYap() {
                         let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^E-E$/) || nextLine.match(/^İY\s*(\d+-\d+|E-E)$/);
                         if (subMatch) {
                             iyScore = subMatch[1] || subMatch[0];
+                            // Eğer İY satırında Drd varsa güncelle
+                            if (nextLine.includes("Drd")) drdEkle = '<span class="drd-text">Drd</span>';
                             i = i + j;
                             break;
                         }
@@ -93,18 +97,14 @@ function islemYap() {
                 }
             }
             
-            // E-E DURUMU ÖZEL DÜZENLEME:
             let displayMS = msScore;
             let displayIY = iyScore;
             
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
-                statusTag = "ERT"; // Etiketi ERT yap
+                statusTag = "ERT";
             }
-
-            // Drd kontrolü: Eğer orijinal satırda "Drd" varsa MS ve İY arasına ekle
-            let drdText = line.includes("Drd") ? " <span style='color:#00e676; font-size:11px;'>Drd</span> " : "";
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
             let tagClass = statusTag === "ERT" ? "ms-tag ert-tag" : "ms-tag";
@@ -115,7 +115,7 @@ function islemYap() {
                     <td>${fullMatchName}</td>
                     <td style="text-align:center">
                         <span class="skor-kutusu">${displayMS}</span>
-                        ${drdText}
+                        ${drdEkle}
                     </td>
                     <td style="text-align:center; color:#888;">${displayIY}</td>
                 </tr>`;
