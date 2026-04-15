@@ -16,7 +16,7 @@
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
         .ert-tag { color: #ff9800; border-color: #ff9800; } 
-        .drd-tag { color: #00bcd4; border-color: #00bcd4; }
+        .drd-tag { color: #00bcd4; border-color: #00bcd4; } 
     </style>
 </head>
 <body>
@@ -46,38 +46,34 @@ function islemYap() {
     tbody.innerHTML = '';
 
     let currentLig = "";
+    let nextMatchIsDrd = false; // Drd etiketini takip etmek için flag
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        // 1. LİG TESPİTİ
+        // 1. Drd TESPİTİ (Bağımsız satırda Drd varsa bir sonraki geçerli maça ata)
+        if (line.toUpperCase() === "DRD") {
+            nextMatchIsDrd = true;
+            continue;
+        }
+
+        // 2. LİG TESPİTİ
         if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS") && !line.includes("DRD")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // 2. MAÇ VE SKOR TESPİTİ
+        // 3. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
             
-            // DRD KONTROLÜ (Geriye dönük satırlarda Drd ibaresini arar)
-            let isDrd = false;
-            for (let k = 1; k <= 3; k++) {
-                if (i - k >= 0) {
-                    let prevLine = lines[i - k].toUpperCase();
-                    if (prevLine === "DRD") {
-                        isDrd = true;
-                        break;
-                    }
-                    // Eğer araya başka bir maç veya lig girdiyse aramayı kes
-                    if (/\d+-\d+/.test(lines[i-k]) || (lines[i-k] === lines[i-k].toUpperCase() && lines[i-k].length > 3)) break;
-                }
-            }
-
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
-            let statusTag = isDrd ? "Drd" : "MS"; 
+            
+            // Eğer bu maçtan önce "Drd" satırı geldiyse durumu Drd yap
+            let statusTag = nextMatchIsDrd ? "Drd" : "MS";
+            nextMatchIsDrd = false; // Kullanıldıktan sonra sıfırla
 
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
@@ -95,6 +91,7 @@ function islemYap() {
 
             if(cleanHome.length < 2) continue;
 
+            // İY skoru alt satırlarda mı kontrol et
             if (msScore !== "E-E" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
