@@ -61,7 +61,9 @@ function islemYap() {
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
-            let statusTag = "MS"; // Varsayılan etiket
+            
+            // YENİ MANTIK: (Drd) varsa etiketi Drd yap
+            let statusTag = line.includes("(Drd)") ? "Drd" : "MS";
 
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
@@ -74,8 +76,9 @@ function islemYap() {
             let home = parts[0] ? parts[0].trim() : "";
             let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            // Temizleme işleminde (Drd) yazısını da kaldırıyoruz
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/\(Drd\)/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/\(Drd\)/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
@@ -100,12 +103,7 @@ function islemYap() {
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
-                statusTag = "ERT"; // Etiketi ERT yap
-            }
-
-            // Drd kontrolü: Eğer satırda parantez içinde (Drd) varsa MS skorunun yanına ekle
-            if (line.includes("(Drd)")) {
-                displayMS = displayMS + " Drd";
+                statusTag = "ERT"; 
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
