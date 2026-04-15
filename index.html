@@ -63,11 +63,6 @@ function islemYap() {
             let iyScore = "-";
             let statusTag = "MS"; // Varsayılan etiket
 
-            // Drd kontrolü: Satırda "Drd" geçiyorsa etiketi Drd yap
-            if (line.includes("Drd")) {
-                statusTag = "Drd";
-            }
-
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
             }
@@ -79,8 +74,8 @@ function islemYap() {
             let home = parts[0] ? parts[0].trim() : "";
             let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/Drd/g, '').trim();
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
@@ -108,6 +103,9 @@ function islemYap() {
                 statusTag = "ERT"; // Etiketi ERT yap
             }
 
+            // Drd kontrolü: Eğer orijinal satırda "Drd" varsa MS ve İY arasına ekle
+            let drdText = line.includes("Drd") ? " <span style='color:#00e676; font-size:11px;'>Drd</span> " : "";
+
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
             let tagClass = statusTag === "ERT" ? "ms-tag ert-tag" : "ms-tag";
 
@@ -115,7 +113,10 @@ function islemYap() {
                 <tr>
                     <td><span class="${tagClass}">${statusTag}</span></td>
                     <td>${fullMatchName}</td>
-                    <td style="text-align:center"><span class="skor-kutusu">${displayMS}</span></td>
+                    <td style="text-align:center">
+                        <span class="skor-kutusu">${displayMS}</span>
+                        ${drdText}
+                    </td>
                     <td style="text-align:center; color:#888;">${displayIY}</td>
                 </tr>`;
         }
