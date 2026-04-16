@@ -16,7 +16,7 @@
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
         .ert-tag { color: #ff9800; border-color: #ff9800; }
-        .saat-tag { color: #81d4fa; border-color: #81d4fa; } /* Saatli maçlar için mavi etiket */
+        .saat-tag { color: #888; border-color: #888; } /* Saatli maçlar için gri etiket */
     </style>
 </head>
 <body>
@@ -57,47 +57,43 @@ function islemYap() {
             continue;
         }
 
-        // 2. MAÇ VE SKOR/SAAT TESPİTİ
-        const scoreMatch = line.match(/\d+-\d+|E-E/g);
-        const timeMatch = line.match(/\d{2}:\d{2}/); // 00:00 formatında saat arar
-
-        if (scoreMatch || timeMatch) {
-            let msScore = scoreMatch ? scoreMatch[0] : "-"; 
+        // 2. MAÇ TESPİTİ (SKORLU VEYA SAATLİ)
+        const skorRegex = /\d+-\d+|E-E/g;
+        const saatRegex = /\b\d{2}:\d{2}\b/;
+        
+        if ((skorRegex.test(line) || saatRegex.test(line)) && line.length > 3) {
+            let matches = line.match(skorRegex); 
+            let timeMatch = line.match(saatRegex);
+            
+            let msScore = matches ? matches[0] : (timeMatch ? timeMatch[0] : "-"); 
             let iyScore = "-";
-            let statusTag = "MS";
-            let tagClass = "ms-tag";
+            let statusTag = matches ? "MS" : "SAAT";
 
-            // Eğer skor yok ama saat varsa durumu saat yapalım
-            if (!scoreMatch && timeMatch) {
-                statusTag = timeMatch[0];
-                tagClass = "ms-tag saat-tag";
+            if (matches && msScore !== "E-E" && matches.length > 1) {
+                iyScore = matches[matches.length - 1];
             }
 
-            if (scoreMatch && msScore !== "E-E" && scoreMatch.length > 1) {
-                iyScore = scoreMatch[scoreMatch.length - 1];
-            }
-
-            // Metni parçalayarak takım isimlerini ayıkla
+            // Temizleme işlemi
             let tempLine = line;
-            if (scoreMatch) {
-                scoreMatch.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
+            if (matches) {
+                matches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
             }
             if (timeMatch) {
                 tempLine = tempLine.replace(timeMatch[0], ' SPLIT ');
             }
             
             let parts = tempLine.split(' SPLIT ');
+            
             let home = parts[0] ? parts[0].trim() : "";
             let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            // Gereksiz karakter temizliği
             let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
             let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
-            // Alt satırlarda İY skoru arama (skorlu maçlar için)
-            if (scoreMatch && msScore !== "E-E" && iyScore === "-") {
+            // Alt satırda İY arama (Sadece skorlu maçlar için)
+            if (matches && msScore !== "E-E" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
@@ -111,15 +107,21 @@ function islemYap() {
                 }
             }
             
-            // E-E DURUMU ÖZEL DÜZENLEME:
             let displayMS = msScore;
             let displayIY = iyScore;
-            
+            let tagClass = "ms-tag";
+
             if (msScore === "E-E") {
                 displayMS = "E";
                 displayIY = "E";
                 statusTag = "ERT";
                 tagClass = "ms-tag ert-tag";
+            } else if (!matches && timeMatch) {
+                // Eğer skor yoksa sadece saat varsa
+                displayMS = "-";
+                displayIY = "-";
+                statusTag = timeMatch[0]; // Durum kısmına saati yazar
+                tagClass = "ms-tag saat-tag";
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
