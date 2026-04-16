@@ -15,8 +15,8 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
-        .drd-metin { color: #00bcd4; font-size: 12px; font-weight: bold; margin-right: 5px; } /* Drd yazısı için stil */
+        .ert-tag { color: #ff9800; border-color: #ff9800; }
+        .drd-label { color: #00e676; font-size: 12px; margin-right: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -59,14 +59,16 @@ function islemYap() {
 
         // 2. MAÇ VE SKOR TESPİTİ
         if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
-            
-            // Drd kontrolü: Skorun yanında (Drd) var mı?
-            let containsDrd = line.includes("(Drd)");
-            
             let matches = line.match(/\d+-\d+|E-E/g); 
             let msScore = matches[0]; 
             let iyScore = "-";
-            let statusTag = "MS"; // Varsayılan etiket değişmiyor
+            let statusTag = "MS";
+            let drdPrefix = "";
+
+            // Satırda parantez içinde (Drd) varsa yakala
+            if (line.includes("(Drd)")) {
+                drdPrefix = '<span class="drd-label">(Drd)</span>';
+            }
 
             if (msScore !== "E-E" && matches.length > 1) {
                 iyScore = matches[matches.length - 1];
@@ -79,7 +81,6 @@ function islemYap() {
             let home = parts[0] ? parts[0].trim() : "";
             let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            // Temizleme yaparken (Drd) metnini isimlerden çıkarıyoruz
             let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/\(Drd\)/g, '').trim();
             let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').replace(/\(Drd\)/g, '').trim();
 
@@ -110,9 +111,6 @@ function islemYap() {
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
             let tagClass = statusTag === "ERT" ? "ms-tag ert-tag" : "ms-tag";
-
-            // MS Sütunu için Drd ekini hazırlama
-            let drdPrefix = containsDrd ? `<span class="drd-metin">Drd</span>` : "";
 
             tbody.innerHTML += `
                 <tr>
