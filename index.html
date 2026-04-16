@@ -15,8 +15,7 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; }
-        .saat-tag { color: #888; border-color: #888; }
+        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
     </style>
 </head>
 <body>
@@ -51,71 +50,49 @@ function islemYap() {
         let line = lines[i];
 
         // 1. LİG TESPİTİ
-        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
+        if (line === line.toUpperCase() && !line.includes('-') && !line.includes(':') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // 2. SKORLU VEYA SAATLİ MAÇ TESPİTİ
+        // 2. MAÇ TESPİTİ (Skor OR Saat/Dakika kontrolü eklendi)
         const hasScore = /\d+-\d+/.test(line) || line.includes("E-E");
-        const hasTime = /\d{2}:\d{2}/.test(line);
+        const hasTime = /\d{2}:\d{2}/.test(line); // 20:00 gibi saat kontrolü
 
         if ((hasScore || hasTime) && line.length > 3) {
-            let msScore = "-";
+            let matches = line.match(/\d+-\d+|E-E/g) || []; 
+            let msScore = matches.length > 0 ? matches[0] : "-"; 
             let iyScore = "-";
             let statusTag = "MS";
-            let tagClass = "ms-tag";
-            let home = "";
-            let away = "";
 
-            if (hasScore) {
-                // Skorlu maç işleme mantığı
-                let matches = line.match(/\d+-\d+|E-E/g); 
-                msScore = matches[0]; 
-
-                if (msScore !== "E-E" && matches.length > 1) {
-                    iyScore = matches[matches.length - 1];
-                }
-
-                let tempLine = line;
-                matches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
-                let parts = tempLine.split(' SPLIT ');
-                
-                home = parts[0] ? parts[0].trim() : "";
-                away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
-
-                if (msScore === "E-E") {
-                    msScore = "E";
-                    iyScore = "E";
-                    statusTag = "ERT";
-                    tagClass = "ms-tag ert-tag";
-                }
-            } else if (hasTime) {
-                // Sadece saat olan (henüz oynanmamış) maçlar
-                let timeMatch = line.match(/\d{2}:\d{2}/)[0];
-                statusTag = timeMatch;
-                tagClass = "ms-tag saat-tag";
-                
-                // Saati metinden çıkarıp takımları alıyoruz
-                let teamPart = line.replace(timeMatch, '').trim();
-                let teams = teamPart.split('-');
-                if(teams.length >= 2) {
-                    home = teams[0].trim();
-                    away = teams[1].trim();
-                } else {
-                    home = teamPart;
-                    away = "";
-                }
+            // Eğer skor yok ama saat varsa MS kısmına saati yazalım
+            if (msScore === "-" && hasTime) {
+                let timeMatch = line.match(/\d{2}:\d{2}/);
+                msScore = timeMatch ? timeMatch[0] : "-";
             }
+
+            if (msScore !== "E-E" && matches.length > 1) {
+                iyScore = matches[matches.length - 1];
+            }
+
+            let tempLine = line;
+            // Skorları veya saati temizleyip takım adlarını alalım
+            let separators = line.match(/\d+-\d+|E-E|\d{2}:\d{2}/g) || [];
+            separators.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
+            
+            let parts = tempLine.split(' SPLIT ');
+            
+            let home = parts[0] ? parts[0].trim() : "";
+            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
             let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
             let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
 
             if(cleanHome.length < 2) continue;
 
-            // İY skoru arama (Eğer skor varsa ve İY yoksa)
-            if (hasScore && msScore !== "E" && iyScore === "-") {
+            // İY Skoru alt satırlarda mı kontrolü
+            if (msScore !== "E-E" && iyScore === "-") {
                 for (let j = 1; j <= 3; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
@@ -128,15 +105,25 @@ function islemYap() {
                     }
                 }
             }
+            
+            let displayMS = msScore;
+            let displayIY = iyScore;
+            
+            if (msScore === "E-E") {
+                displayMS = "E";
+                displayIY = "E";
+                statusTag = "ERT";
+            }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
+            let tagClass = statusTag === "ERT" ? "ms-tag ert-tag" : "ms-tag";
 
             tbody.innerHTML += `
                 <tr>
                     <td><span class="${tagClass}">${statusTag}</span></td>
                     <td>${fullMatchName}</td>
-                    <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
-                    <td style="text-align:center; color:#888;">${iyScore}</td>
+                    <td style="text-align:center"><span class="skor-kutusu">${displayMS}</span></td>
+                    <td style="text-align:center; color:#888;">${displayIY}</td>
                 </tr>`;
         }
     }
