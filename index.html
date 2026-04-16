@@ -15,7 +15,8 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; } /* Ertelenenler için turuncu etiket */
+        .ert-tag { color: #ff9800; border-color: #ff9800; }
+        .bekle-tag { color: #888; border-color: #555; } /* Skorsuz maçlar için gri etiket */
     </style>
 </head>
 <body>
@@ -56,62 +57,72 @@ function islemYap() {
             continue;
         }
 
-        // 2. MAÇ VE SKOR TESPİTİ
-        if ((/\d+-\d+/.test(line) || line.includes("E-E")) && line.length > 3) {
-            let matches = line.match(/\d+-\d+|E-E/g); 
-            let msScore = matches[0]; 
+        // 2. MAÇ TESPİTİ (Skor olsun veya olmasın içinde "-" geçen satırlar)
+        if (line.includes('-') && line.length > 3) {
+            let msScore = "-";
             let iyScore = "-";
-            let statusTag = "MS"; // Varsayılan etiket
+            let statusTag = "MS";
+            let tagClass = "ms-tag";
 
-            if (msScore !== "E-E" && matches.length > 1) {
-                iyScore = matches[matches.length - 1];
+            // Skorları bul (0-0 veya E-E formatı)
+            let matches = line.match(/\d+-\d+|E-E/g); 
+            
+            let homeAwayPart = line;
+
+            if (matches) {
+                msScore = matches[0];
+                if (msScore === "E-E") {
+                    msScore = "E";
+                    iyScore = "E";
+                    statusTag = "ERT";
+                    tagClass = "ms-tag ert-tag";
+                } else if (matches.length > 1) {
+                    iyScore = matches[matches.length - 1];
+                }
+                
+                // Skorları metinden temizle ki takım isimleri kalsın
+                matches.forEach(m => { homeAwayPart = homeAwayPart.replace(m, ' SPLIT '); });
+            } else {
+                // Skor yoksa durumu "BAŞL." veya boş yapabiliriz
+                statusTag = "-";
+                tagClass = "ms-tag bekle-tag";
             }
 
-            let tempLine = line;
-            matches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
-            let parts = tempLine.split(' SPLIT ');
-            
+            // Takım isimlerini ayır
+            let parts = homeAwayPart.split(/SPLIT|-/);
             let home = parts[0] ? parts[0].trim() : "";
-            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
+            let away = parts[1] ? parts[1].trim() : "";
 
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            // Gereksiz ifadeleri temizle
+            const clean = (text) => text.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanHome = clean(home);
+            let cleanAway = clean(away);
 
             if(cleanHome.length < 2) continue;
 
-            if (msScore !== "E-E" && iyScore === "-") {
-                for (let j = 1; j <= 3; j++) {
+            // Eğer alt satırda İY skoru unutulmuşsa kontrol et (Opsiyonel)
+            if (msScore !== "-" && msScore !== "E" && iyScore === "-") {
+                for (let j = 1; j <= 2; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
-                        let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^E-E$/) || nextLine.match(/^İY\s*(\d+-\d+|E-E)$/);
+                        let subMatch = nextLine.match(/^(\d+-\d+)$/);
                         if (subMatch) {
-                            iyScore = subMatch[1] || subMatch[0];
-                            i = i + j;
+                            iyScore = subMatch[1];
+                            i = i + j; // Satırı atla
                             break;
                         }
                     }
                 }
             }
-            
-            // E-E DURUMU ÖZEL DÜZENLEME:
-            let displayMS = msScore;
-            let displayIY = iyScore;
-            
-            if (msScore === "E-E") {
-                displayMS = "E";
-                displayIY = "E";
-                statusTag = "ERT"; // Etiketi ERT yap
-            }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
-            let tagClass = statusTag === "ERT" ? "ms-tag ert-tag" : "ms-tag";
 
             tbody.innerHTML += `
                 <tr>
                     <td><span class="${tagClass}">${statusTag}</span></td>
                     <td>${fullMatchName}</td>
-                    <td style="text-align:center"><span class="skor-kutusu">${displayMS}</span></td>
-                    <td style="text-align:center; color:#888;">${displayIY}</td>
+                    <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
+                    <td style="text-align:center; color:#888;">${iyScore}</td>
                 </tr>`;
         }
     }
