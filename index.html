@@ -15,8 +15,8 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; }
-        .saat-tag { color: #2196f3; border-color: #2196f3; } /* Saatli maçlar için mavi etiket */
+        .ert-tag { color: #ff9800; border-color: #ff9800; } 
+        .saat-tag { color: #81d4fa; border-color: #81d4fa; } /* Saatli maçlar için mavi etiket */
     </style>
 </head>
 <body>
@@ -57,58 +57,33 @@ function islemYap() {
             continue;
         }
 
-        // 2. MAÇ TESPİTİ (Skorlu VEYA Saatli)
-        const hasScore = /\d+-\d+/.test(line) || line.includes("E-E");
-        const hasTime = /\d{2}:\d{2}/.test(line);
+        // 2. MAÇ TESPİTİ (Skorlu maçlar, Ertelenmiş maçlar veya Saat içeren satırlar)
+        const skorVar = /\d+-\d+/.test(line);
+        const ertelenmis = line.includes("E-E");
+        const saatVar = /\d{2}:\d{2}/.test(line); // 20:30 gibi saatleri yakalar
 
-        if ((hasScore || hasTime) && line.length > 3) {
-            let msScore = "-";
-            let iyScore = "-";
-            let statusTag = "MS";
-            let tagClass = "ms-tag";
-
-            // Skor varsa çek
-            let scoreMatches = line.match(/\d+-\d+|E-E/g);
+        if ((skorVar || ertelenmis || saatVar) && line.length > 3) {
+            let matches = line.match(/\d+-\d+|E-E/g); 
+            let hourMatch = line.match(/\d{2}:\d{2}/);
             
-            if (scoreMatches) {
-                msScore = scoreMatches[0];
-                if (msScore !== "E-E" && scoreMatches.length > 1) {
-                    iyScore = scoreMatches[scoreMatches.length - 1];
-                }
-                
-                // İY skoru bir alt satırda mı kontrolü
-                if (msScore !== "E-E" && iyScore === "-") {
-                    for (let j = 1; j <= 3; j++) {
-                        if (i + j < lines.length) {
-                            let nextLine = lines[i + j].trim();
-                            let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^E-E$/) || nextLine.match(/^İY\s*(\d+-\d+|E-E)$/);
-                            if (subMatch) {
-                                iyScore = subMatch[1] || subMatch[0];
-                                i = i + j;
-                                break;
-                            }
-                        }
-                    }
-                }
-            } else if (hasTime) {
-                // Skor yok ama saat varsa
-                let timeMatch = line.match(/\d{2}:\d{2}/);
-                msScore = timeMatch[0];
-                statusTag = "SAAT";
-                tagClass = "ms-tag saat-tag";
+            let msScore = matches ? matches[0] : (hourMatch ? hourMatch[0] : "-"); 
+            let iyScore = "-";
+            let statusTag = matches ? "MS" : "SAAT"; 
+
+            if (matches && msScore !== "E-E" && matches.length > 1) {
+                iyScore = matches[matches.length - 1];
             }
 
-            // Temizleme işlemleri
+            // Metni temizleme ve Takımları ayırma
             let tempLine = line;
-            if (scoreMatches) {
-                scoreMatches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
+            if(matches) {
+                matches.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
+            } else if(hourMatch) {
+                tempLine = tempLine.replace(hourMatch[0], ' SPLIT ');
             }
-            if (hasTime) {
-                let tMatch = line.match(/\d{2}:\d{2}/);
-                tempLine = tempLine.replace(tMatch[0], ' SPLIT ');
-            }
-
+            
             let parts = tempLine.split(' SPLIT ');
+            
             let home = parts[0] ? parts[0].trim() : "";
             let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
@@ -117,7 +92,21 @@ function islemYap() {
 
             if(cleanHome.length < 2) continue;
 
-            // E-E Durumu
+            // İY Skoru bir alt satırda mı kontrolü (Sadece skorlu maçlar için)
+            if (matches && msScore !== "E-E" && iyScore === "-") {
+                for (let j = 1; j <= 3; j++) {
+                    if (i + j < lines.length) {
+                        let nextLine = lines[i + j].trim();
+                        let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^E-E$/) || nextLine.match(/^İY\s*(\d+-\d+|E-E)$/);
+                        if (subMatch) {
+                            iyScore = subMatch[1] || subMatch[0];
+                            i = i + j;
+                            break;
+                        }
+                    }
+                }
+            }
+            
             let displayMS = msScore;
             let displayIY = iyScore;
             
@@ -125,10 +114,14 @@ function islemYap() {
                 displayMS = "E";
                 displayIY = "E";
                 statusTag = "ERT";
-                tagClass = "ms-tag ert-tag";
             }
 
             let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
+            
+            // Etiket rengini belirle
+            let tagClass = "ms-tag";
+            if(statusTag === "ERT") tagClass += " ert-tag";
+            if(statusTag === "SAAT") tagClass += " saat-tag";
 
             tbody.innerHTML += `
                 <tr>
