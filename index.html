@@ -15,14 +15,14 @@
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; }
-        .saat-tag { color: #03a9f4; border-color: #03a9f4; } /* Saatli maçlar için mavi etiket */
+        .ert-tag { color: #ff9800; border-color: #ff9800; } 
+        .saat-tag { color: #81d4fa; border-color: #81d4fa; } /* Gelecek maçlar için mavi etiket */
     </style>
 </head>
 <body>
 
 <div class="container">
-    <textarea id="rawInput" placeholder="Karışık metni buraya yapıştırın (Skorlu veya sadece saatli maçlar)..."></textarea>
+    <textarea id="rawInput" placeholder="Karışık metni buraya yapıştırın..."></textarea>
     <button onclick="islemYap()">LİSTEYİ DÜZELT VE SIRALA</button>
 
     <table>
@@ -50,63 +50,81 @@ function islemYap() {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        // 1. LİG TESPİTİ (Büyük harf ve sayı içermeyen satırlar)
+        // 1. LİG TESPİTİ
         if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // 2. MAÇ TESPİTİ (Skor \d-\d, Ertelenen E-E veya Saat \d\d:\d\d içeren satırlar)
-        const scoreMatch = line.match(/\d+-\d+/);
-        const eeMatch = line.includes("E-E");
-        const timeMatch = line.match(/(\d{2}:\d{2})/);
+        // 2. MAÇ TESPİTİ (SKORLU VEYA SAATLİ)
+        const skorRegex = /\d+-\d+/;
+        const saatRegex = /\d{2}:\d{2}/;
+        const ertelenenRegex = /E-E/;
 
-        if (scoreMatch || eeMatch || timeMatch) {
+        if (skorRegex.test(line) || saatRegex.test(line) || ertelenenRegex.test(line)) {
             let msScore = "-";
             let iyScore = "-";
             let statusTag = "MS";
             let tagClass = "ms-tag";
-            let matchText = line;
 
-            if (eeMatch) {
-                msScore = "E";
-                iyScore = "E";
-                statusTag = "ERT";
-                tagClass = "ms-tag ert-tag";
-                matchText = line.replace("E-E", "").replace("MS", "");
-            } else if (scoreMatch) {
-                // Skorlu maç işlemi
-                let matches = line.match(/\d+-\d+/g);
+            let matches = line.match(/\d+-\d+|E-E/g);
+            let timeMatch = line.match(/\d{2}:\d{2}/);
+
+            // Skor varsa
+            if (matches) {
                 msScore = matches[0];
-                if (matches.length > 1) iyScore = matches[1];
-                
-                // Temizlik
-                matches.forEach(m => { matchText = matchText.replace(m, ''); });
-                matchText = matchText.replace("MS", "");
-            } else if (timeMatch) {
-                // Sadece saatli maç işlemi
-                msScore = timeMatch[1]; // Skora saati yaz
+                if (msScore === "E-E") {
+                    msScore = "E";
+                    iyScore = "E";
+                    statusTag = "ERT";
+                    tagClass = "ms-tag ert-tag";
+                } else if (matches.length > 1) {
+                    iyScore = matches[matches.length - 1];
+                }
+            } 
+            // Skor yok ama saat varsa
+            else if (timeMatch) {
+                msScore = timeMatch[0]; // Saat bilgisini MS alanına yazabiliriz veya boş bırakabiliriz
                 statusTag = "SAAT";
                 tagClass = "ms-tag saat-tag";
-                matchText = line.replace(timeMatch[1], "");
             }
 
-            // Takım isimlerini temizle
-            let cleanMatch = matchText
-                .replace(/[☆✩✰]/g, '')
-                .replace(/\d+\sMS/g, '')
-                .replace(/MS/g, '')
-                .replace(/\s+/g, ' ')
-                .trim();
+            // Takım isimlerini temizleme
+            let cleanLine = line;
+            if (matches) matches.forEach(m => { cleanLine = cleanLine.replace(m, ' SPLIT '); });
+            if (timeMatch) cleanLine = cleanLine.replace(timeMatch[0], ' SPLIT ');
 
-            // Eğer takım ismi çok kısaysa veya sadece sembol kaldıysa atla
-            if(cleanMatch.length < 3) continue;
+            let parts = cleanLine.split(' SPLIT ');
+            let home = parts[0] ? parts[0].trim() : "";
+            let away = (parts[1] && !parts[1].includes("MS")) ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
+
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+
+            if (cleanHome.length < 2) continue;
+
+            // İY Skoru alt satırda mı kontrolü (Sadece skorlu maçlar için)
+            if (statusTag === "MS" && iyScore === "-") {
+                for (let j = 1; j <= 3; j++) {
+                    if (i + j < lines.length) {
+                        let nextLine = lines[i + j].trim();
+                        let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
+                        if (subMatch) {
+                            iyScore = subMatch[1];
+                            i = i + j;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
 
             tbody.innerHTML += `
                 <tr>
                     <td><span class="${tagClass}">${statusTag}</span></td>
-                    <td>${cleanMatch}</td>
+                    <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
                     <td style="text-align:center; color:#888;">${iyScore}</td>
                 </tr>`;
