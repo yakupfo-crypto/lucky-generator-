@@ -135,32 +135,34 @@ function tabloyuKopyala() {
     const tbody = document.getElementById('sonucAlani');
     let kopyalanacakMetin = "";
     const rows = tbody.querySelectorAll('tr');
+    
+    // Maksimum maç ismi uzunluğu (hizalama için)
+    const maxKarakter = 40; 
 
     rows.forEach(row => {
         if (row.cells.length === 1) {
-            // Lig başlıklarını olduğu gibi bırakıyoruz
-            kopyalanacakMetin += `\n${row.innerText}\n`;
+            kopyalanacakMetin += `\n--- ${row.innerText} ---\n`;
         } else {
-            // DURUM SÜTUNU HARİÇ: Maç İsmi, MS skoru ve İY skorunu yan yana tek boşlukla ekle
-            // Görseldeki "Goias GO - Criciuma 1-0 0-0" formatı
             let mac = row.cells[1].innerText;
             let ms = row.cells[2].innerText;
             let iy = row.cells[3].innerText;
+
+            // Hizalama mantığı: Maç ismini maxKarakter kadar boşlukla tamamla
+            let hizaliMac = mac.padEnd(maxKarakter, ' ');
             
-            // Eğer MS veya İY '-' ise temiz bir görünüm için boşlukları ayarla
-            kopyalanacakMetin += `${mac} ${ms} ${iy}\n`;
+            kopyalanacakMetin += `${hizaliMac} MS: ${ms}   İY: ${iy}\n`;
         }
     });
 
     if (kopyalanacakMetin.trim() === "") {
-        alert("Önce listeyi oluşturun.");
+        alert("Kopyalanacak veri bulunamadı.");
         return;
     }
 
     navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
-        alert("Liste orijinal dizilişiyle kopyalandı!");
+        alert("Hizalı liste kopyalandı!");
     }).catch(err => {
-        console.error('Hata:', err);
+        console.error('Kopyalama hatası:', err);
     });
 }
 </script>
