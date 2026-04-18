@@ -133,24 +133,33 @@ function islemYap() {
 
 function tabloyuKopyala() {
     const tbody = document.getElementById('sonucAlani');
-    let kopyalanacakMetin = "";
     const rows = tbody.querySelectorAll('tr');
-    
-    // Maksimum maç ismi uzunluğu (hizalama için)
-    const maxKarakter = 40; 
+    let kopyalanacakMetin = "";
+
+    // Hizalama için en uzun maç ismini bul (Görsel hiza için padding)
+    let maxMacUzunlugu = 0;
+    rows.forEach(row => {
+        if (row.cells.length > 1) {
+            let len = row.cells[1].innerText.length;
+            if (len > maxMacUzunlugu) maxMacUzunlugu = len;
+        }
+    });
 
     rows.forEach(row => {
         if (row.cells.length === 1) {
+            // Lig başlığı
             kopyalanacakMetin += `\n--- ${row.innerText} ---\n`;
         } else {
+            // Maç satırı (Durum sütunu hariç)
             let mac = row.cells[1].innerText;
             let ms = row.cells[2].innerText;
             let iy = row.cells[3].innerText;
 
-            // Hizalama mantığı: Maç ismini maxKarakter kadar boşlukla tamamla
-            let hizaliMac = mac.padEnd(maxKarakter, ' ');
+            // Maç ismini max uzunluğa tamamla (Görsel hiza sağlar)
+            let hizaliMac = mac.padEnd(maxMacUzunlugu + 2, ' ');
             
-            kopyalanacakMetin += `${hizaliMac} MS: ${ms}   İY: ${iy}\n`;
+            // Format: Maç İsmi       MS      İY
+            kopyalanacakMetin += `${hizaliMac}\t${ms}\t${iy}\n`;
         }
     });
 
@@ -160,7 +169,7 @@ function tabloyuKopyala() {
     }
 
     navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
-        alert("Hizalı liste kopyalandı!");
+        alert("Hizalı liste (Durum hariç) kopyalandı!");
     }).catch(err => {
         console.error('Kopyalama hatası:', err);
     });
