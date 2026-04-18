@@ -138,28 +138,27 @@ function tabloyuKopyala() {
 
     rows.forEach(row => {
         if (row.cells.length === 1) {
-            // Lig başlığı - Düzeni korumak için başına ve sonuna satır başı ekleyerek kopyala
-            kopyalanacakMetin += `\n[ ${row.innerText} ]\n`;
+            // Lig başlığı - Temiz bir ayraç ile
+            kopyalanacakMetin += `\n● ${row.innerText} ●\n`;
         } else {
-            // Maç satırı: Durum sütunu (index 0) hariç, Maç (1), MS (2) ve İY (3) sütunları yan yana
+            // Durum (0) hariç: Maç (1), MS (2), İY (3)
             let mac = row.cells[1].innerText;
             let ms = row.cells[2].innerText;
             let iy = row.cells[3].innerText;
             
-            // Yan yana aynı dizilişle: Maç İsmi [Sekme] MS [Sekme] İY
-            kopyalanacakMetin += `${mac}\t${ms}\t${iy}\n`;
+            // Görseldeki gibi "Maç İsmi Skor Skor" düzeninde yan yana kopyalar
+            // \t (Tab) karakteri yapıştırılan yerde sütunlu durmasını sağlar
+            kopyalanacakMetin += `${mac}  ${ms}  ${iy}\n`;
         }
     });
 
     if (kopyalanacakMetin.trim() === "") {
-        alert("Kopyalanacak veri bulunamadı.");
+        alert("Kopyalanacak veri yok!");
         return;
     }
 
     navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
-        alert("Durum sütunu hariç, maç isimleri ve skorlar kopyalandı!");
-    }).catch(err => {
-        console.error('Kopyalama hatası:', err);
+        alert("Liste (Durum hariç) orijinal dizilişiyle kopyalandı!");
     });
 }
 </script>
