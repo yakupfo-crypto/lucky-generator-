@@ -133,43 +133,29 @@ function islemYap() {
 
 function tabloyuKopyala() {
     const tbody = document.getElementById('sonucAlani');
-    const rows = tbody.querySelectorAll('tr');
     let kopyalanacakMetin = "";
-
-    // Hizalama için en uzun maç ismini bul (Görsel hiza için padding)
-    let maxMacUzunlugu = 0;
-    rows.forEach(row => {
-        if (row.cells.length > 1) {
-            let len = row.cells[1].innerText.length;
-            if (len > maxMacUzunlugu) maxMacUzunlugu = len;
-        }
-    });
+    const rows = tbody.querySelectorAll('tr');
 
     rows.forEach(row => {
         if (row.cells.length === 1) {
-            // Lig başlığı
+            // Lig başlığı - Kopyalamaya dahil
             kopyalanacakMetin += `\n--- ${row.innerText} ---\n`;
         } else {
-            // Maç satırı (Durum sütunu hariç)
+            // Maç satırı - Durum hücresi (index 0) atlanıyor
             let mac = row.cells[1].innerText;
             let ms = row.cells[2].innerText;
             let iy = row.cells[3].innerText;
-
-            // Maç ismini max uzunluğa tamamla (Görsel hiza sağlar)
-            let hizaliMac = mac.padEnd(maxMacUzunlugu + 2, ' ');
-            
-            // Format: Maç İsmi       MS      İY
-            kopyalanacakMetin += `${hizaliMac}\t${ms}\t${iy}\n`;
+            kopyalanacakMetin += `${mac}\tMS: ${ms}\tİY: ${iy}\n`;
         }
     });
 
     if (kopyalanacakMetin.trim() === "") {
-        alert("Kopyalanacak veri bulunamadı.");
+        alert("Kopyalanacak veri bulunamadı. Önce listeyi düzeltin.");
         return;
     }
 
     navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
-        alert("Hizalı liste (Durum hariç) kopyalandı!");
+        alert("Liste (Durum sütunu hariç) kopyalandı!");
     }).catch(err => {
         console.error('Kopyalama hatası:', err);
     });
