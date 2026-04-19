@@ -43,56 +43,70 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    // Satırları parçala, boşlukları temizle ama boş satırları tamamen silme (skor alt satırda olabilir)
+    const lines = input.split('\n').map(l => l.trim());
     const tbody = document.getElementById('sonucAlani');
     tbody.innerHTML = '';
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
-        
-        // Skorları (0-0 veya E-E) ve Saatleri (00:00) bul
+        if (!line) continue;
+
+        // Skorları (0-0 veya E-E veya (0-0)) bul
         const scores = line.match(/\d+-\d+|E-E/g) || [];
         const time = line.match(/\d{2}:\d{2}/);
 
-        // Eğer satırda skor, saat veya " - " varsa bu bir maç adayıdır
+        // Bir satırın maç olması için isim, skor veya zaman içermesi gerekir
         if (scores.length > 0 || time || line.includes(" - ")) {
             let msScore = "-";
             let iyScore = "-";
 
-            // Skor dağıtımı
-            if (scores.length > 0) {
+            // Skor Dağıtımı
+            if (scores.length >= 2) {
+                // Eğer satırda 2 skor varsa ilki MS ikincisi İY'dir
+                msScore = scores[0];
+                iyScore = scores[1];
+            } else if (scores.length === 1) {
                 msScore = scores[0];
                 if (msScore === "E-E") {
                     msScore = "E"; iyScore = "E";
-                } else if (scores.length > 1) {
-                    iyScore = scores[1];
                 }
             }
 
-            // İY skoru bazen alt satırda "İY 0-0" veya sadece "0-0" şeklinde olabilir
-            if (iyScore === "-" && msScore !== "E" && i + 1 < lines.length) {
-                let nextLine = lines[i+1].trim();
-                let nextScore = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
-                if (nextScore) {
-                    iyScore = nextScore[1] || nextScore[0];
+            // --- KRİTİK İY KONTROLÜ: Eğer İY hala bulunamadıysa alt satırlara bak ---
+            if (iyScore === "-" && msScore !== "E") {
+                // Sonraki 2 satıra bak (Bazen arada boşluk veya "İY" yazısı olabilir)
+                for (let j = 1; j <= 2; j++) {
+                    if (i + j < lines.length) {
+                        let nextLine = lines[i + j].trim();
+                        // Alt satırda sadece skor varsa veya İY ifadesiyle başlıyorsa
+                        let nextScoreMatch = nextLine.match(/\(?(\d+-\d+)\)?/);
+                        // Alt satır yeni bir maç değilse (içinde " - " yoksa) skoru al
+                        if (nextScoreMatch && !nextLine.includes(" - ")) {
+                            iyScore = nextScoreMatch[1];
+                            break; 
+                        }
+                    }
                 }
             }
 
-            // Maç adını temizleme: Skorları, saatleri ve gereksiz MS ibarelerini at
+            // Maç adını temizleme
             let cleanName = line
-                .replace(/\d+-\d+/g, '')
+                .replace(/\(\d+-\d+\)/g, '') // Parantez içi skorları sil
+                .replace(/\d+-\d+/g, '')     // Normal skorları sil
                 .replace(/E-E/g, '')
                 .replace(/\d{2}:\d{2}/g, '')
                 .replace(/[☆✩✰]/g, '')
                 .replace(/\d+\s*MS/g, '')
-                .replace(/\bMS\b/g, '')
+                .replace(/\bMS\b/gi, '')
+                .replace(/\bİY\b/gi, '')
                 .replace(/\s+/g, ' ')
                 .trim();
 
-            // Eğer temizlikten sonra sadece "-" kaldıysa veya çok kısaysa atla
-            if (cleanName === "-" || cleanName.length < 2) continue;
-
-            // Başta veya sonda kalan gereksiz tireleri temizle
+            // Eğer isim çok kısaysa ve skor yoksa geç (Hatalı başlıkları engellemek için)
+            if (cleanName.length < 2 && msScore === "-") continue;
+            
+            // Başta/Sonda kalan tireleri temizle
             cleanName = cleanName.replace(/^-+|-+$/g, '').trim();
 
             tbody.innerHTML += `
