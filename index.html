@@ -49,59 +49,59 @@ function islemYap() {
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
-
-        // Temizlik: Gereksiz karakterleri ve "MS" gibi ifadeleri temizle
-        let cleanLine = line.replace(/[☆✩✰]/g, '').replace(/MS/g, '').trim();
         
-        // Maç adı tespiti (içinde '-' olan veya yan yana kelimeler olan satırlar)
-        // Skor içeren veya içermeyen tüm satırları potansiyel maç olarak gör
-        const scoreRegex = /(\d+-\d+|E-E)/g;
-        const timeRegex = /\d{2}:\d{2}/;
-        
-        let msScore = "-";
-        let iyScore = "-";
+        // Skorları (0-0 veya E-E) ve Saatleri (00:00) bul
+        const scores = line.match(/\d+-\d+|E-E/g) || [];
+        const time = line.match(/\d{2}:\d{2}/);
 
-        // Skor bulma
-        let matches = cleanLine.match(scoreRegex);
-        if (matches) {
-            msScore = matches[0];
-            if (msScore === "E-E") {
-                msScore = "E"; iyScore = "E";
-            } else if (matches.length > 1) {
-                iyScore = matches[1];
+        // Eğer satırda skor, saat veya " - " varsa bu bir maç adayıdır
+        if (scores.length > 0 || time || line.includes(" - ")) {
+            let msScore = "-";
+            let iyScore = "-";
+
+            // Skor dağıtımı
+            if (scores.length > 0) {
+                msScore = scores[0];
+                if (msScore === "E-E") {
+                    msScore = "E"; iyScore = "E";
+                } else if (scores.length > 1) {
+                    iyScore = scores[1];
+                }
             }
-        }
 
-        // İY skoru bir alt satırda mı?
-        if (iyScore === "-" && i + 1 < lines.length) {
-            let nextLine = lines[i+1].trim();
-            let nextMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
-            if (nextMatch) {
-                iyScore = nextMatch[1] || nextMatch[0];
-                // i++ yapmıyoruz çünkü alt satır başka bir maçın parçası da olabilir, kontrollü ilerliyoruz
+            // İY skoru bazen alt satırda "İY 0-0" veya sadece "0-0" şeklinde olabilir
+            if (iyScore === "-" && msScore !== "E" && i + 1 < lines.length) {
+                let nextLine = lines[i+1].trim();
+                let nextScore = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
+                if (nextScore) {
+                    iyScore = nextScore[1] || nextScore[0];
+                }
             }
+
+            // Maç adını temizleme: Skorları, saatleri ve gereksiz MS ibarelerini at
+            let cleanName = line
+                .replace(/\d+-\d+/g, '')
+                .replace(/E-E/g, '')
+                .replace(/\d{2}:\d{2}/g, '')
+                .replace(/[☆✩✰]/g, '')
+                .replace(/\d+\s*MS/g, '')
+                .replace(/\bMS\b/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            // Eğer temizlikten sonra sadece "-" kaldıysa veya çok kısaysa atla
+            if (cleanName === "-" || cleanName.length < 2) continue;
+
+            // Başta veya sonda kalan gereksiz tireleri temizle
+            cleanName = cleanName.replace(/^-+|-+$/g, '').trim();
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${cleanName}</td>
+                    <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
+                    <td style="text-align:center; color:#888;">${iyScore}</td>
+                </tr>`;
         }
-
-        // Takım isimlerini ayıklama
-        let matchName = cleanLine
-            .replace(scoreRegex, '')
-            .replace(timeRegex, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-        // Eğer satır sadece skordan ibaretse veya çok kısaysa bir öncekiyle birleştirmeyi dene ya da atla
-        if (matchName.length < 3 && !cleanLine.includes("-")) continue;
-
-        // Maç ismini güzelleştir (Çift tireleri engelle)
-        if (matchName.startsWith("-")) matchName = matchName.substring(1).trim();
-        if (matchName.endsWith("-")) matchName = matchName.slice(0, -1).trim();
-
-        tbody.innerHTML += `
-            <tr>
-                <td>${matchName}</td>
-                <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
-                <td style="text-align:center; color:#888;">${iyScore}</td>
-            </tr>`;
     }
 }
 
