@@ -15,7 +15,6 @@
         table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
-        .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
     </style>
 </head>
@@ -48,22 +47,13 @@ function islemYap() {
     const tbody = document.getElementById('sonucAlani');
     tbody.innerHTML = '';
 
-    let currentLig = "";
-
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
-
-        // LİG BAŞLIĞI KONTROLÜ
-        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
-            currentLig = line;
-            tbody.innerHTML += `<tr><td colspan="3" class="lig-baslik">${currentLig}</td></tr>`;
-            continue;
-        }
 
         const hasScore = /\d+-\d+/.test(line) || line.includes("E-E");
         const hasTime = /\d{2}:\d{2}/.test(line);
 
-        // Maç satırı tespiti
+        // Maç satırı tespiti (Durum veya Başlık satırlarını eler)
         if (hasScore || hasTime || line.includes(" - ")) {
             let msScore = "-";
             let iyScore = "-";
@@ -123,7 +113,6 @@ function tabloyuKopyala() {
     let kopyalanacakMetin = "";
     let maxMacUzunlugu = 0;
 
-    // Hizalama için en uzun ismi bul
     rows.forEach(row => {
         if (row.cells.length === 3) {
             let len = row.cells[0].innerText.length;
@@ -132,16 +121,12 @@ function tabloyuKopyala() {
     });
 
     rows.forEach(row => {
-        if (row.cells.length === 1) {
-            kopyalanacakMetin += `\n--- ${row.innerText} ---\n`;
-        } else {
-            let mac = row.cells[0].innerText;
-            let ms = row.cells[1].innerText;
-            let iy = row.cells[2].innerText;
-            
-            let hizaliMac = mac.padEnd(maxMacUzunlugu + 4, ' ');
-            kopyalanacakMetin += `${hizaliMac}\t${ms}\t${iy}\n`;
-        }
+        let mac = row.cells[0].innerText;
+        let ms = row.cells[1].innerText;
+        let iy = row.cells[2].innerText;
+        
+        let hizaliMac = mac.padEnd(maxMacUzunlugu + 4, ' ');
+        kopyalanacakMetin += `${hizaliMac}\t${ms}\t${iy}\n`;
     });
 
     if (kopyalanacakMetin.trim() === "") {
@@ -149,7 +134,7 @@ function tabloyuKopyala() {
     }
 
     navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
-        alert("Liste (Durum sütunu olmadan) kopyalandı!");
+        alert("Liste kopyalandı!");
     }).catch(err => {
         console.error('Hata:', err);
     });
