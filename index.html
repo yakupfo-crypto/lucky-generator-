@@ -17,9 +17,6 @@
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
-        .ms-tag { color: #00e676; font-weight: bold; font-size: 11px; border: 1px solid #00e676; padding: 2px 4px; border-radius: 3px; display: inline-block; min-width: 30px; text-align: center; }
-        .ert-tag { color: #ff9800; border-color: #ff9800; }
-        .saat-tag { color: #03a9f4; border-color: #03a9f4; }
     </style>
 </head>
 <body>
@@ -35,7 +32,6 @@
     <table id="skorTablosu">
         <thead>
             <tr>
-                <th>DURUM</th>
                 <th>MAÇ</th>
                 <th style="text-align:center">MS</th>
                 <th style="text-align:center">İY</th>
@@ -57,20 +53,20 @@ function islemYap() {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
+        // LİG BAŞLIĞI KONTROLÜ
         if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
-            tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
+            tbody.innerHTML += `<tr><td colspan="3" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
         const hasScore = /\d+-\d+/.test(line) || line.includes("E-E");
         const hasTime = /\d{2}:\d{2}/.test(line);
 
-        if ((hasScore || hasTime) && line.length > 3) {
+        // Maç satırı tespiti
+        if (hasScore || hasTime || line.includes(" - ")) {
             let msScore = "-";
             let iyScore = "-";
-            let statusTag = "MS";
-            let tagClass = "ms-tag";
 
             if (hasScore) {
                 let matches = line.match(/\d+-\d+|E-E/g); 
@@ -79,30 +75,21 @@ function islemYap() {
                 if (msScore !== "E-E" && matches.length > 1) {
                     iyScore = matches[matches.length - 1];
                 } else if (msScore === "E-E") {
-                    msScore = "E";
-                    iyScore = "E";
-                    statusTag = "ERT";
-                    tagClass = "ms-tag ert-tag";
+                    msScore = "E"; iyScore = "E";
                 }
 
                 if (msScore !== "E" && iyScore === "-") {
-                    for (let j = 1; j <= 3; j++) {
+                    for (let j = 1; j <= 2; j++) {
                         if (i + j < lines.length) {
                             let nextLine = lines[i + j].trim();
-                            let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^E-E$/) || nextLine.match(/^İY\s*(\d+-\d+|E-E)$/);
+                            let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
                             if (subMatch) {
                                 iyScore = subMatch[1] || subMatch[0];
-                                i = i + j;
-                                break;
+                                i = i + j; break;
                             }
                         }
                     }
                 }
-            } else if (hasTime) {
-                statusTag = line.match(/\d{2}:\d{2}/)[0];
-                tagClass = "ms-tag saat-tag";
-                msScore = "-";
-                iyScore = "-";
             }
 
             let tempLine = line;
@@ -122,7 +109,6 @@ function islemYap() {
 
             tbody.innerHTML += `
                 <tr>
-                    <td><span class="${tagClass}">${statusTag}</span></td>
                     <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
                     <td style="text-align:center; color:#888;">${iyScore}</td>
@@ -133,31 +119,39 @@ function islemYap() {
 
 function tabloyuKopyala() {
     const tbody = document.getElementById('sonucAlani');
-    let kopyalanacakMetin = "";
     const rows = tbody.querySelectorAll('tr');
+    let kopyalanacakMetin = "";
+    let maxMacUzunlugu = 0;
+
+    // Hizalama için en uzun ismi bul
+    rows.forEach(row => {
+        if (row.cells.length === 3) {
+            let len = row.cells[0].innerText.length;
+            if (len > maxMacUzunlugu) maxMacUzunlugu = len;
+        }
+    });
 
     rows.forEach(row => {
         if (row.cells.length === 1) {
-            // Lig başlığı - Kopyalamaya dahil
             kopyalanacakMetin += `\n--- ${row.innerText} ---\n`;
         } else {
-            // Maç satırı - Durum hücresi (index 0) atlanıyor
-            let mac = row.cells[1].innerText;
-            let ms = row.cells[2].innerText;
-            let iy = row.cells[3].innerText;
-            kopyalanacakMetin += `${mac}\tMS: ${ms}\tİY: ${iy}\n`;
+            let mac = row.cells[0].innerText;
+            let ms = row.cells[1].innerText;
+            let iy = row.cells[2].innerText;
+            
+            let hizaliMac = mac.padEnd(maxMacUzunlugu + 4, ' ');
+            kopyalanacakMetin += `${hizaliMac}\t${ms}\t${iy}\n`;
         }
     });
 
     if (kopyalanacakMetin.trim() === "") {
-        alert("Kopyalanacak veri bulunamadı. Önce listeyi düzeltin.");
-        return;
+        alert("Kopyalanacak veri bulunamadı."); return;
     }
 
     navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
-        alert("Liste (Durum sütunu hariç) kopyalandı!");
+        alert("Liste (Durum sütunu olmadan) kopyalandı!");
     }).catch(err => {
-        console.error('Kopyalama hatası:', err);
+        console.error('Hata:', err);
     });
 }
 </script>
