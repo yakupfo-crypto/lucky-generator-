@@ -43,27 +43,24 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    // Satırları parçala, boşlukları temizle ama boş satırları tamamen silme (skor alt satırda olabilir)
-    const lines = input.split('\n').map(l => l.trim());
+    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const tbody = document.getElementById('sonucAlani');
     tbody.innerHTML = '';
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
-        if (!line) continue;
-
-        // Skorları (0-0 veya E-E veya (0-0)) bul
+        
+        // Skor formatlarını (0-0, 1-2, E-E vb.) yakala
         const scores = line.match(/\d+-\d+|E-E/g) || [];
         const time = line.match(/\d{2}:\d{2}/);
 
-        // Bir satırın maç olması için isim, skor veya zaman içermesi gerekir
+        // Satır geçerli bir maç verisi içeriyor mu?
         if (scores.length > 0 || time || line.includes(" - ")) {
             let msScore = "-";
             let iyScore = "-";
 
-            // Skor Dağıtımı
+            // 1. Durum: Skorlar aynı satırda
             if (scores.length >= 2) {
-                // Eğer satırda 2 skor varsa ilki MS ikincisi İY'dir
                 msScore = scores[0];
                 iyScore = scores[1];
             } else if (scores.length === 1) {
@@ -73,40 +70,37 @@ function islemYap() {
                 }
             }
 
-            // --- KRİTİK İY KONTROLÜ: Eğer İY hala bulunamadıysa alt satırlara bak ---
+            // 2. Durum: İY skoru bir veya iki alt satırda gizlenmiş olabilir
             if (iyScore === "-" && msScore !== "E") {
-                // Sonraki 2 satıra bak (Bazen arada boşluk veya "İY" yazısı olabilir)
+                // Sonraki 2 satırı kontrol et (Bazen araya reklam veya boşluk girer)
                 for (let j = 1; j <= 2; j++) {
                     if (i + j < lines.length) {
                         let nextLine = lines[i + j].trim();
-                        // Alt satırda sadece skor varsa veya İY ifadesiyle başlıyorsa
-                        let nextScoreMatch = nextLine.match(/\(?(\d+-\d+)\)?/);
-                        // Alt satır yeni bir maç değilse (içinde " - " yoksa) skoru al
-                        if (nextScoreMatch && !nextLine.includes(" - ")) {
-                            iyScore = nextScoreMatch[1];
+                        // Alt satırda skor var mı? (Örn: "0-0" veya "İY 0-0")
+                        let nextScoreMatch = nextLine.match(/\d+-\d+/);
+                        // Eğer alt satır yeni bir maç değilse ve skor içeriyorsa onu İY kabul et
+                        if (nextScoreMatch && !nextLine.includes(" - ") && !/\d{2}:\d{2}/.test(nextLine)) {
+                            iyScore = nextScoreMatch[0];
                             break; 
                         }
                     }
                 }
             }
 
-            // Maç adını temizleme
+            // İsim temizleme mantığı
             let cleanName = line
-                .replace(/\(\d+-\d+\)/g, '') // Parantez içi skorları sil
-                .replace(/\d+-\d+/g, '')     // Normal skorları sil
+                .replace(/\d+-\d+/g, '')
                 .replace(/E-E/g, '')
                 .replace(/\d{2}:\d{2}/g, '')
                 .replace(/[☆✩✰]/g, '')
                 .replace(/\d+\s*MS/g, '')
-                .replace(/\bMS\b/gi, '')
-                .replace(/\bİY\b/gi, '')
+                .replace(/\bMS\b/g, '')
+                .replace(/\bİY\b/g, '')
                 .replace(/\s+/g, ' ')
                 .trim();
 
-            // Eğer isim çok kısaysa ve skor yoksa geç (Hatalı başlıkları engellemek için)
-            if (cleanName.length < 2 && msScore === "-") continue;
-            
-            // Başta/Sonda kalan tireleri temizle
+            if (cleanName === "-" || cleanName.length < 2) continue;
+
             cleanName = cleanName.replace(/^-+|-+$/g, '').trim();
 
             tbody.innerHTML += `
