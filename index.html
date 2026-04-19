@@ -57,64 +57,79 @@ function islemYap() {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        // LİG BAŞLIĞI TESPİTİ (Büyük harf ve kısa olmayan satırlar)
-        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS") && !line.includes("İY")) {
+        // Lig tespiti
+        if (line === line.toUpperCase() && !line.includes('-') && isNaN(line.charAt(0)) && line.length > 3 && !line.includes("MS")) {
             currentLig = line;
             tbody.innerHTML += `<tr><td colspan="4" class="lig-baslik">${currentLig}</td></tr>`;
             continue;
         }
 
-        // MAÇ VERİSİ TESPİTİ
-        // Skor, Saat veya Tire (-) içeren satırları maç olarak kabul ediyoruz
         const hasScore = /\d+-\d+/.test(line) || line.includes("E-E");
         const hasTime = /\d{2}:\d{2}/.test(line);
-        const hasHyphen = line.includes(" - ");
+        const hasVersus = line.includes(" - "); // Skor olmasa bile maç satırı olduğunu anlamak için
 
-        if (hasScore || hasTime || hasHyphen) {
+        // Eğer satırda skor, saat veya en azından bir " - " (takım ayracı) varsa işle
+        if ((hasScore || hasTime || hasVersus) && line.length > 3) {
             let msScore = "-";
             let iyScore = "-";
             let statusTag = "MS";
             let tagClass = "ms-tag";
 
-            // Skorları Ayrıştır
-            let scores = line.match(/\d+-\d+|E-E/g) || [];
-            
-            if (scores.length > 0) {
-                msScore = scores[0];
-                if (msScore === "E-E") {
-                    msScore = "E"; iyScore = "E"; statusTag = "ERT"; tagClass = "ms-tag ert-tag";
-                } else if (scores.length > 1) {
-                    iyScore = scores[scores.length - 1];
-                }
-            }
+            if (hasScore) {
+                let matches = line.match(/\d+-\d+|E-E/g); 
+                msScore = matches[0]; 
 
-            // Saat Bilgisini Ayrıştır
-            let times = line.match(/\d{2}:\d{2}/);
-            if (times) {
-                statusTag = times[0];
+                if (msScore !== "E-E" && matches.length > 1) {
+                    iyScore = matches[matches.length - 1];
+                } else if (msScore === "E-E") {
+                    msScore = "E";
+                    iyScore = "E";
+                    statusTag = "ERT";
+                    tagClass = "ms-tag ert-tag";
+                }
+
+                // Alt satırda İY skoru arama
+                if (msScore !== "E" && iyScore === "-") {
+                    for (let j = 1; j <= 3; j++) {
+                        if (i + j < lines.length) {
+                            let nextLine = lines[i + j].trim();
+                            let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^E-E$/) || nextLine.match(/^İY\s*(\d+-\d+|E-E)$/);
+                            if (subMatch) {
+                                iyScore = subMatch[1] || subMatch[0];
+                                i = i + j;
+                                break;
+                            }
+                        }
+                    }
+                }
+            } else if (hasTime) {
+                statusTag = line.match(/\d{2}:\d{2}/)[0];
+                tagClass = "ms-tag saat-tag";
+            } else {
+                // Sadece maç ismi varsa
+                statusTag = "VS";
                 tagClass = "ms-tag saat-tag";
             }
 
-            // Temizleme: Satırdan skorları ve saatleri çıkararak maç ismini bul
-            let cleanName = line;
-            let toRemove = line.match(/\d+-\d+|E-E|\d{2}:\d{2}/g) || [];
-            toRemove.forEach(r => { cleanName = cleanName.replace(r, ""); });
+            let tempLine = line;
+            let removeItems = line.match(/\d+-\d+|E-E|\d{2}:\d{2}/g) || [];
+            removeItems.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
             
-            // Ekstra kirli kelimeleri temizle
-            cleanName = cleanName.replace(/[☆✩✰]/g, '')
-                                .replace(/\d+\sMS/g, '')
-                                .replace(/\bMS\b/g, '')
-                                .replace(/\bİY\b/g, '')
-                                .trim();
+            let parts = tempLine.split(' SPLIT ');
+            let home = parts[0] ? parts[0].trim() : "";
+            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            // Eğer temizlemeden sonra hala tire varsa maç ismi düzgündür, 
-            // yoksa (boşsa) bu satırı maç olarak ekleme
-            if (cleanName.length < 3) continue;
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+
+            if(cleanHome.length < 2) continue;
+
+            let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
 
             tbody.innerHTML += `
                 <tr>
                     <td><span class="${tagClass}">${statusTag}</span></td>
-                    <td>${cleanName}</td>
+                    <td>${fullMatchName}</td>
                     <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
                     <td style="text-align:center; color:#888;">${iyScore}</td>
                 </tr>`;
@@ -127,33 +142,42 @@ function tabloyuKopyala() {
     const rows = tbody.querySelectorAll('tr');
     let kopyalanacakMetin = "";
 
-    // Hizalama için max uzunluk bulma
-    let maxLen = 0;
-    rows.forEach(r => {
-        if(r.cells.length > 1) {
-            let l = r.cells[1].innerText.length;
-            if(l > maxLen) maxLen = l;
+    // Hizalama için en uzun maç ismini bul
+    let maxMacUzunlugu = 0;
+    rows.forEach(row => {
+        if (row.cells.length > 1) {
+            let len = row.cells[1].innerText.length;
+            if (len > maxMacUzunlugu) maxMacUzunlugu = len;
         }
     });
 
     rows.forEach(row => {
         if (row.cells.length === 1) {
+            // Lig başlığı
             kopyalanacakMetin += `\n--- ${row.innerText} ---\n`;
         } else {
+            // Maç satırı (DURUM sütunu atlanıyor)
             let mac = row.cells[1].innerText;
             let ms = row.cells[2].innerText;
             let iy = row.cells[3].innerText;
+
+            // Görsel hiza için boşluk ekleme (padEnd)
+            let hizaliMac = mac.padEnd(maxMacUzunlugu + 2, ' ');
             
-            // Hizalı boşluk ekleme
-            let pad = " ".repeat(Math.max(2, (maxLen - mac.length) + 4));
-            kopyalanacakMetin += `${mac}${pad}MS: ${ms}\tİY: ${iy}\n`;
+            // Maç İsmi [Hizalı] | MS | İY
+            kopyalanacakMetin += `${hizaliMac}\t${ms}\t${iy}\n`;
         }
     });
 
-    if (!kopyalanacakMetin.trim()) { alert("Liste boş!"); return; }
+    if (kopyalanacakMetin.trim() === "") {
+        alert("Kopyalanacak veri bulunamadı.");
+        return;
+    }
 
     navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
-        alert("Tüm maçlar hizalı şekilde kopyalandı!");
+        alert("Skorsuz maçlar dahil, tüm liste kopyalandı!");
+    }).catch(err => {
+        console.error('Kopyalama hatası:', err);
     });
 }
 </script>
