@@ -47,7 +47,6 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    // Satırları temizlerken sadece tireden oluşan satırları görmezden gel
     const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0 && l !== '-');
     const tbody = document.getElementById('sonucAlani');
     const fragment = document.createDocumentFragment();
@@ -57,12 +56,11 @@ function islemYap() {
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
-        
-        // Satırın başındaki veya sonundaki bağımsız tireleri temizle ama skorun içindekine dokunma
         line = line.replace(/(^-\s+)|(\s+-$)/g, '').trim();
 
-        let scores = line.match(scoreRegex) || [];
+        let scoresInLine = line.match(scoreRegex) || [];
         
+        // Takım ismini temizle
         let matchName = line
             .replace(scoreRegex, '')
             .replace(/\d{2}:\d{2}/g, '')
@@ -71,27 +69,39 @@ function islemYap() {
             .replace(/\s+/g, ' ')
             .trim();
 
-        if (scores.length === 0 && matchName.length > 3) {
-            if (i + 1 < lines.length) {
-                // Alt satırda skor ararken de tireleri yok say
-                let cleanNextLine = lines[i+1].replace(/(^-)|(-$)/g, '').trim();
-                let nextLineScores = cleanNextLine.match(scoreRegex);
+        if (matchName.length > 3) {
+            let msScore = "-";
+            let iyScore = "-";
+
+            // Senaryo 1: Skor maç isminin yanındaysa (örn: Takım A 1-1 Takım B)
+            if (scoresInLine.length > 0) {
+                // Genelde bu durumda satırdaki skor asıl skordur, ancak alt satırda başka bir skor varsa 
+                // satırdaki skoru İY, alttakini MS kabul etme ihtimalini kontrol et
+                if (i + 1 < lines.length && lines[i+1].match(/^(\d+-\d+)$/)) {
+                    iyScore = scoresInLine[0];
+                    msScore = lines[i+1].match(scoreRegex)[0];
+                    i++; // Alt satırı kullandık
+                } else {
+                    msScore = scoresInLine[0];
+                    iyScore = scoresInLine.length > 1 ? scoresInLine[1] : "-";
+                }
+            } 
+            // Senaryo 2: Skorlar tamamen alt satırlardaysa
+            else if (i + 1 < lines.length) {
+                let nextLineScores = lines[i+1].match(scoreRegex);
                 if (nextLineScores) {
-                    scores = nextLineScores;
+                    msScore = nextLineScores[0];
+                    if (nextLineScores.length > 1) {
+                        iyScore = nextLineScores[1];
+                    } else if (i + 2 < lines.length && lines[i+2].match(/^(\d+-\d+)$/)) {
+                        iyScore = lines[i+2].match(scoreRegex)[0];
+                        i++; 
+                    }
+                    i++; 
                 }
             }
-        }
 
-        if (scores.length > 0 && matchName.length > 3) {
-            let msScore = scores[0]; 
-            let iyScore = scores.length > 1 ? scores[1] : "-";
-
-            if (iyScore === "-" && i + 1 < lines.length) {
-                let nextLine = lines[i+1].trim().replace(/(^-)|(-$)/g, '').trim();
-                if (nextLine.match(/^(\d+-\d+)$/)) {
-                    iyScore = nextLine;
-                }
-            }
+            // Eğer MS ve İY yer değiştirmişse veya hatalıysa düzeltme (isteğe bağlı mantık eklenebilir)
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
