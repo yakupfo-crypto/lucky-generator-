@@ -55,16 +55,16 @@ function islemYap() {
     tbody.innerHTML = '';
 
     for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+        let line = lines[i];
+        line = line.replace(/(^-\s+)|(\s+-$)/g, '').trim();
+
         let scores = line.match(scoreRegex) || [];
         
-        // Takım ismini belirlerken satır sonundaki gerçek skoru koru, 
-        // ancak takımların arasına sızmış olabilecek orta kısımdaki skorları temizle.
+        // KRİTİK DEĞİŞİKLİK: .replace(scoreRegex, ' ') -> Skor silindiğinde takımlar yapışmasın diye boşluk eklendi
         let matchName = line
-            .replace(/\b\d+-\d+\b(?!\s*$)/g, '') // Satır sonu haricindeki skorları sil
-            .replace(scoreRegex, '')
-            .replace(/\d{2}:\d{2}/g, '')
-            .replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '')
+            .replace(scoreRegex, ' ') 
+            .replace(/\d{2}:\d{2}/g, ' ')
+            .replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, ' ')
             .replace(/[☆✩✰*]/g, '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -80,7 +80,6 @@ function islemYap() {
         }
 
         if (scores.length > 0 && matchName.length > 3) {
-            // Eğer satırda birden fazla skor varsa en sondakini MS, bir öncekini İY kabul etme eğilimi (ekran görüntüsündeki yapıya göre)
             let msScore = scores[0]; 
             let iyScore = scores.length > 1 ? scores[1] : "-";
 
