@@ -18,7 +18,6 @@
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
-        .iy-skor { color: #888; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -46,67 +45,72 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    const lines = input.split('\n');
+    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const tbody = document.getElementById('sonucAlani');
-    let htmlContent = '';
+    
+    // Performans için fragment kullanımı
+    const fragment = document.createDocumentFragment();
+    tbody.innerHTML = '';
 
-    lines.forEach(line => {
-        let text = line.trim();
-        if (!text || text.length < 3) return;
+    lines.forEach((line) => {
+        // Skoru yakala (0-0, 1-2, E-E vb.)
+        const scoreRegex = /(\d+-\d+|E-E)/g;
+        const matches = line.match(scoreRegex);
 
-        // Skorları bul (0-0 veya 1-2 gibi)
-        let scores = text.match(/\d+-\d+/g);
-        let msScore = "-";
-        let iyScore = "-";
+        if (matches) {
+            let msScore = matches[0];
+            let iyScore = matches.length > 1 ? matches[1] : "-";
 
-        if (scores) {
-            msScore = scores[0]; // İlk bulunan genelde MS'dir
-            if (scores.length > 1) {
-                iyScore = scores[scores.length - 1]; // Son bulunan genelde İY'dir
-            }
-        } else if (text.includes("E-E")) {
-            msScore = "E";
-            iyScore = "E";
-        }
+            // Takım isimlerini temizle (Skorları, saatleri ve MS yazılarını at)
+            let cleanLine = line
+                .replace(scoreRegex, '|')
+                .replace(/\d{2}:\d{2}/g, '')
+                .replace(/MS/g, '')
+                .replace(/İY/g, '')
+                .replace(/[☆✩✰]/g, '')
+                .trim();
 
-        // Temizleme: Metinden skorları, saatleri ve gereksiz ibareleri çıkar
-        let cleanName = text
-            .replace(/\d+-\d+/g, '') // Skorları sil
-            .replace(/\d{2}:\d{2}/g, '') // Saatleri sil
-            .replace(/İY|MS|Sona Erdi|Bitti|E-E|\[|\]/g, '') // Gereksiz kelimeleri sil
-            .replace(/[☆✩✰]/g, '') // Yıldızları sil
-            .replace(/\s\s+/g, ' ') // Çift boşlukları teke indir
-            .trim();
+            // Takımları ayır
+            let teams = cleanLine.split('|').map(t => t.trim()).filter(t => t.length > 1);
+            let fullMatchName = teams.join(' - ');
 
-        // Eğer sadece skor kaldıysa veya isim çok kısaysa atla
-        if (cleanName.length < 2) return;
+            // Eğer takım ismi düzgün oluşmadıysa satırı atlama, en azından skoru göster
+            if (!fullMatchName && teams.length === 0) return;
 
-        htmlContent += `
-            <tr>
-                <td>${cleanName}</td>
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${fullMatchName || "Bilinmeyen Maç"}</td>
                 <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
-                <td style="text-align:center" class="iy-skor">${iyScore}</td>
-            </tr>`;
+                <td style="text-align:center; color:#888;">${iyScore}</td>
+            `;
+            fragment.appendChild(tr);
+        }
     });
 
-    tbody.innerHTML = htmlContent;
+    tbody.appendChild(fragment);
 }
 
 function tabloyuKopyala() {
     const rows = document.querySelectorAll('#sonucAlani tr');
-    let textOut = "";
+    let kopyalanacakMetin = "";
     
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length === 3) {
-            textOut += `${cells[0].innerText}\t${cells[1].innerText}\t${cells[2].innerText}\n`;
+            const mac = cells[0].innerText;
+            const ms = cells[1].innerText;
+            const iy = cells[2].innerText;
+            kopyalanacakMetin += `${mac}\t${ms}\t${iy}\n`;
         }
     });
 
-    if (!textOut) return alert("Liste boş!");
+    if (!kopyalanacakMetin) {
+        alert("Kopyalanacak veri bulunamadı.");
+        return;
+    }
 
-    navigator.clipboard.writeText(textOut.trim()).then(() => {
-        alert("Liste kopyalandı!");
+    navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
+        alert("Liste başarıyla kopyalandı!");
     });
 }
 </script>
