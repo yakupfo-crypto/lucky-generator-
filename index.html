@@ -101,21 +101,20 @@ function islemYap() {
 function tabloyuKopyala() {
     const rows = document.querySelectorAll('#sonucAlani tr');
     let text = "";
-    
-    // Yapıştırılan yerde hizanın bozulmaması için Tab karakteri kullanılır
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length === 3) {
             const mac = cells[0].innerText.trim();
             const ms = cells[1].innerText.trim();
             const iy = cells[2].innerText.trim();
-            // \t (Tab) sütunların dikeyde hizalı kalmasını sağlar
-            text += mac + "\t" + ms + "\t" + iy + "\n";
+            
+            // Kopyalandığında skorların yanına MS ve İY ekler ve sütun hizasını korur
+            text += `${mac}\t${ms} MS\t${iy} İY\n`;
         }
     });
 
     if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste hizada kopyalandı!"));
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste MS ve İY ibareleriyle kopyalandı!"));
     } else {
         alert("Kopyalanacak veri yok.");
     }
