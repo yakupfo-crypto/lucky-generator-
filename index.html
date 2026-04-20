@@ -47,7 +47,8 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    // Satırları temizlerken sadece tireden oluşan satırları görmezden gel
+    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0 && l !== '-');
     const tbody = document.getElementById('sonucAlani');
     const fragment = document.createDocumentFragment();
     const scoreRegex = /(\d+-\d+|E-E)/g;
@@ -56,6 +57,10 @@ function islemYap() {
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
+        
+        // Satırın başındaki veya sonundaki bağımsız tireleri temizle ama skorun içindekine dokunma
+        line = line.replace(/(^-\s+)|(\s+-$)/g, '').trim();
+
         let scores = line.match(scoreRegex) || [];
         
         let matchName = line
@@ -63,12 +68,14 @@ function islemYap() {
             .replace(/\d{2}:\d{2}/g, '')
             .replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '')
             .replace(/[☆✩✰*]/g, '')
-            .replace(/\s\s+/g, ' ')
+            .replace(/\s+/g, ' ')
             .trim();
 
         if (scores.length === 0 && matchName.length > 3) {
             if (i + 1 < lines.length) {
-                let nextLineScores = lines[i+1].match(scoreRegex);
+                // Alt satırda skor ararken de tireleri yok say
+                let cleanNextLine = lines[i+1].replace(/(^-)|(-$)/g, '').trim();
+                let nextLineScores = cleanNextLine.match(scoreRegex);
                 if (nextLineScores) {
                     scores = nextLineScores;
                 }
@@ -80,7 +87,7 @@ function islemYap() {
             let iyScore = scores.length > 1 ? scores[1] : "-";
 
             if (iyScore === "-" && i + 1 < lines.length) {
-                let nextLine = lines[i+1].trim();
+                let nextLine = lines[i+1].trim().replace(/(^-)|(-$)/g, '').trim();
                 if (nextLine.match(/^(\d+-\d+)$/)) {
                     iyScore = nextLine;
                 }
@@ -104,7 +111,6 @@ function tabloyuKopyala() {
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length === 3) {
-            // Yapıştırılan yerde MS skorun, İY ilk yarının solunda olacak şekilde düzenlendi
             text += `${cells[0].innerText.trim()}\tMS ${cells[1].innerText.trim()}\tİY ${cells[2].innerText.trim()}\n`;
         }
     });
