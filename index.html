@@ -58,31 +58,40 @@ function islemYap() {
         let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
         let currentScores = currentLine.match(scoreRegex);
 
-        // 3 SATIRLI ÖZEL BLOK KONTROLÜ
-        // 1. Satır: Ev Sahibi + MS
-        // 2. Satır: Deplasman Takımı
-        // 3. Satır: İY Skoru
+        // 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: Deplasman, 3: İY)
         if (currentScores && i + 2 < lines.length) {
-            let secondLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+            let nextLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             
-            let secondScores = secondLine.match(scoreRegex);
-            let thirdScores = thirdLine.match(scoreRegex);
+            let nextLineScores = nextLine.match(scoreRegex);
+            let thirdLineScores = thirdLine.match(scoreRegex);
 
-            // Koşul: 1. satırda skor var, 2. satırda skor YOK (Takım ismi), 3. satırda skor var (İY)
-            if (currentScores.length === 1 && !secondScores && thirdScores) {
+            // Yeni Yapı: 1. satır (Ev + MS), 2. satır (Deplasman - skor yok), 3. satır (Sadece İY skoru)
+            if (currentScores.length === 1 && !nextLineScores && thirdLineScores) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let awayTeam = secondLine;
+                let awayTeam = nextLine.trim();
                 let msScore = currentScores[0];
-                let iyScore = thirdScores[0];
+                let iyScore = thirdLineScores[0];
 
                 ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
                 i += 2; 
                 continue;
             }
+            
+            // Alternatif Yapı (Önceki): 1. satır (Ev+MS), 2. satır (İY), 3. satır (Deplasman)
+            if (currentScores.length === 1 && nextLineScores && !thirdLineScores) {
+                let homeTeam = currentLine.replace(scoreRegex, '').trim();
+                let awayTeam = thirdLine.trim();
+                let msScore = currentScores[0];
+                let iyScore = nextLineScores[0];
+
+                ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
+                i += 2;
+                continue;
+            }
         }
 
-        // STANDART İŞLEME MANTIĞI
+        // STANDART İŞLEME
         let matchName = currentLine.replace(scoreRegex, '').replace(/\d{2}:\d{2}/g, '').replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '').replace(/[☆✩✰*]/g, '').replace(/\s+/g, ' ').trim();
         let scores = currentScores || [];
 
@@ -126,7 +135,7 @@ function tabloyuKopyala() {
     });
 
     if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste MS ve İY ibareleriyle kopyalandı!"));
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste kopyalandı!"));
     } else {
         alert("Kopyalanacak veri yok.");
     }
