@@ -13,14 +13,32 @@
         .btn-islem { background: #00c853; color: black; }
         .btn-islem:active { transform: scale(0.98); }
         .btn-kopyala { background: #03a9f4; color: white; }
-        table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
-        th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
-        td { padding: 12px 5px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
-        .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         
-        /* Sütunları birbirine en yakın mesafeye getiren ayarlar */
-        .col-mac { width: auto; }
-        .col-skor { width: 1px; white-space: nowrap; text-align: center; padding-left: 2px; padding-right: 2px; } 
+        table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; table-layout: fixed; }
+        th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
+        td { padding: 12px 5px; border-bottom: 1px solid #2d2d2d; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .skor-kutusu { 
+            display: inline-block;
+            width: 45px; /* Skor kutusunun genişliğini sabitledim */
+            background: #333; 
+            padding: 4px 0; 
+            border-radius: 4px; 
+            color: #ffeb3b; 
+            font-weight: bold; 
+            text-align: center;
+            font-family: 'Courier New', monospace; /* Rakamların hizası için sabit aralıklı font */
+        }
+        
+        /* Sütun Hizalamaları */
+        .col-mac { width: 70%; }
+        .col-skor { width: 15%; text-align: center; }
+        .iy-metin { 
+            display: inline-block;
+            width: 45px; 
+            text-align: center; 
+            font-family: 'Courier New', monospace; 
+        }
     </style>
 </head>
 <body>
@@ -89,9 +107,9 @@ function islemYap() {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${matchName}</td>
+                <td class="col-mac">${matchName}</td>
                 <td class="col-skor"><span class="skor-kutusu">${msScore}</span></td>
-                <td class="col-skor" style="color:#888;">${iyScore}</td>
+                <td class="col-skor" style="color:#888;"><span class="iy-metin">${iyScore}</span></td>
             `;
             fragment.appendChild(tr);
         }
@@ -101,27 +119,19 @@ function islemYap() {
 
 function tabloyuKopyala() {
     const rows = document.querySelectorAll('#sonucAlani tr');
-    let copyText = "";
-    
+    let text = "";
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length === 3) {
-            const mac = cells[0].innerText.trim();
-            const ms = cells[1].innerText.trim();
-            const iy = cells[2].innerText.trim();
-            // Birebir aynı diziliş için aralara tab (\t) koyarak satır oluşturur
-            copyText += `${mac}\t${ms}\t${iy}\n`;
+            // Kopyalandığında hizalı durması için tab tuşu (\t) kullanır
+            text += `${cells[0].innerText.trim()}\t${cells[1].innerText.trim()}\t${cells[2].innerText.trim()}\n`;
         }
     });
 
-    if (copyText) {
-        navigator.clipboard.writeText(copyText.trim()).then(() => {
-            alert("Liste birebir aynı dizilişle kopyalandı!");
-        }).catch(err => {
-            console.error('Kopyalama hatası:', err);
-        });
+    if (text) {
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste hizada kopyalandı!"));
     } else {
-        alert("Kopyalanacak veri yok. Önce listeyi düzeltin.");
+        alert("Kopyalanacak veri yok.");
     }
 }
 </script>
