@@ -7,19 +7,15 @@
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 10px; }
         .container { max-width: 900px; margin: auto; }
-        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; outline: none; }
+        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; transition: 0.2s; }
+        button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; }
         .btn-islem { background: #00c853; color: black; }
-        .btn-islem:active { transform: scale(0.98); }
         .btn-kopyala { background: #03a9f4; color: white; }
         table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
-        td { padding: 12px 5px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
+        td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
-        
-        .col-mac { width: auto; }
-        .col-skor { width: 1px; white-space: nowrap; text-align: center; padding-left: 2px; padding-right: 2px; } 
     </style>
 </head>
 <body>
@@ -35,9 +31,9 @@
     <table id="skorTablosu">
         <thead>
             <tr>
-                <th class="col-mac">MAÇ</th>
-                <th class="col-skor">MS</th>
-                <th class="col-skor">İY</th>
+                <th>MAÇ</th>
+                <th style="text-align:center">MS</th>
+                <th style="text-align:center">İY</th>
             </tr>
         </thead>
         <tbody id="sonucAlani"></tbody>
@@ -49,85 +45,99 @@ function islemYap() {
     const input = document.getElementById('rawInput').value;
     const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const tbody = document.getElementById('sonucAlani');
-    const fragment = document.createDocumentFragment();
-    const scoreRegex = /(\d+-\d+|E-E)/g;
-    
     tbody.innerHTML = '';
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
-        let scores = line.match(scoreRegex) || [];
-        
-        let matchName = line
-            .replace(scoreRegex, '')
-            .replace(/\d{2}:\d{2}/g, '')
-            .replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '')
-            .replace(/[☆✩✰*]/g, '')
-            .replace(/\s\s+/g, ' ')
-            .trim();
 
-        if (scores.length === 0 && matchName.length > 3) {
-            if (i + 1 < lines.length) {
-                let nextLineScores = lines[i+1].match(scoreRegex);
-                if (nextLineScores) {
-                    scores = nextLineScores;
+        const hasScore = /\d+-\d+/.test(line) || line.includes("E-E");
+        const hasTime = /\d{2}:\d{2}/.test(line);
+
+        // Maç satırı tespiti (Durum veya Başlık satırlarını eler)
+        if (hasScore || hasTime || line.includes(" - ")) {
+            let msScore = "-";
+            let iyScore = "-";
+
+            if (hasScore) {
+                let matches = line.match(/\d+-\d+|E-E/g); 
+                msScore = matches[0]; 
+
+                if (msScore !== "E-E" && matches.length > 1) {
+                    iyScore = matches[matches.length - 1];
+                } else if (msScore === "E-E") {
+                    msScore = "E"; iyScore = "E";
+                }
+
+                if (msScore !== "E" && iyScore === "-") {
+                    for (let j = 1; j <= 2; j++) {
+                        if (i + j < lines.length) {
+                            let nextLine = lines[i + j].trim();
+                            let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
+                            if (subMatch) {
+                                iyScore = subMatch[1] || subMatch[0];
+                                i = i + j; break;
+                            }
+                        }
+                    }
                 }
             }
-        }
 
-        if (scores.length > 0 && matchName.length > 3) {
-            let msScore = scores[0]; 
-            let iyScore = scores.length > 1 ? scores[1] : "-";
+            let tempLine = line;
+            let removeItems = line.match(/\d+-\d+|E-E|\d{2}:\d{2}/g) || [];
+            removeItems.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
+            
+            let parts = tempLine.split(' SPLIT ');
+            let home = parts[0] ? parts[0].trim() : "";
+            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
 
-            if (iyScore === "-" && i + 1 < lines.length) {
-                let nextLine = lines[i+1].trim();
-                if (nextLine.match(/^(\d+-\d+)$/)) {
-                    iyScore = nextLine;
-                }
-            }
+            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
+            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
 
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${matchName}</td>
-                <td class="col-skor"><span class="skor-kutusu">${msScore}</span></td>
-                <td class="col-skor" style="color:#888;">${iyScore}</td>
-            `;
-            fragment.appendChild(tr);
+            if(cleanHome.length < 2) continue;
+
+            let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${fullMatchName}</td>
+                    <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
+                    <td style="text-align:center; color:#888;">${iyScore}</td>
+                </tr>`;
         }
     }
-    tbody.appendChild(fragment);
 }
 
 function tabloyuKopyala() {
-    const rows = document.querySelectorAll('#sonucAlani tr');
-    let text = "";
-    let maxLength = 0;
+    const tbody = document.getElementById('sonucAlani');
+    const rows = tbody.querySelectorAll('tr');
+    let kopyalanacakMetin = "";
+    let maxMacUzunlugu = 0;
 
-    // Önce en uzun maç isminin uzunluğunu buluyoruz (Hizalama için)
     rows.forEach(row => {
-        const name = row.querySelectorAll('td')[0].innerText.trim();
-        if (name.length > maxLength) maxLength = name.length;
-    });
-
-    // Her satırı bu uzunluğa göre boşlukla doldurarak hizalıyoruz
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length === 3) {
-            let name = cells[0].innerText.trim();
-            let ms = cells[1].innerText.trim();
-            let iy = cells[2].innerText.trim();
-            
-            // İsimleri sağdan boşlukla doldurarak sütunları hizala
-            let paddedName = name.padEnd(maxLength + 2, ' ');
-            text += `${paddedName}\t${ms}\t${iy}\n`;
+        if (row.cells.length === 3) {
+            let len = row.cells[0].innerText.length;
+            if (len > maxMacUzunlugu) maxMacUzunlugu = len;
         }
     });
 
-    if (text) {
-        navigator.clipboard.writeText(text).then(() => alert("Hizalı liste kopyalandı!"));
-    } else {
-        alert("Kopyalanacak veri yok.");
+    rows.forEach(row => {
+        let mac = row.cells[0].innerText;
+        let ms = row.cells[1].innerText;
+        let iy = row.cells[2].innerText;
+        
+        let hizaliMac = mac.padEnd(maxMacUzunlugu + 4, ' ');
+        kopyalanacakMetin += `${hizaliMac}\t${ms}\t${iy}\n`;
+    });
+
+    if (kopyalanacakMetin.trim() === "") {
+        alert("Kopyalanacak veri bulunamadı."); return;
     }
+
+    navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
+        alert("Liste kopyalandı!");
+    }).catch(err => {
+        console.error('Hata:', err);
+    });
 }
 </script>
 
