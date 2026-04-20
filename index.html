@@ -13,14 +13,13 @@
         .btn-islem { background: #00c853; color: black; }
         .btn-islem:active { transform: scale(0.98); }
         .btn-kopyala { background: #03a9f4; color: white; }
-        table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; table-layout: fixed; }
+        table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
-        td { padding: 12px 5px; border-bottom: 1px solid #2d2d2d; font-size: 14px; vertical-align: middle; }
-        .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; display: inline-block; min-width: 35px; text-align: center; }
+        td { padding: 12px 5px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
+        .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         
-        /* MS ve İY sütunlarını yukarıdan aşağıya ve yanlardan tam hizalı yapan ayarlar */
-        .col-mac { width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .col-skor { width: 15%; text-align: center; } 
+        .col-mac { width: auto; }
+        .col-skor { width: 1px; white-space: nowrap; text-align: center; padding-left: 2px; padding-right: 2px; } 
     </style>
 </head>
 <body>
@@ -89,7 +88,7 @@ function islemYap() {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td class="col-mac">${matchName}</td>
+                <td>${matchName}</td>
                 <td class="col-skor"><span class="skor-kutusu">${msScore}</span></td>
                 <td class="col-skor" style="color:#888;">${iyScore}</td>
             `;
@@ -102,19 +101,30 @@ function islemYap() {
 function tabloyuKopyala() {
     const rows = document.querySelectorAll('#sonucAlani tr');
     let text = "";
+    let maxLength = 0;
+
+    // Önce en uzun maç isminin uzunluğunu buluyoruz (Hizalama için)
+    rows.forEach(row => {
+        const name = row.querySelectorAll('td')[0].innerText.trim();
+        if (name.length > maxLength) maxLength = name.length;
+    });
+
+    // Her satırı bu uzunluğa göre boşlukla doldurarak hizalıyoruz
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length === 3) {
-            // Kopyalandığında hizanın bozulmaması için maç ismini sabit boşlukla ayırır
-            let mac = cells[0].innerText.padEnd(40, ' ');
-            let ms = cells[1].innerText.padEnd(10, ' ');
-            let iy = cells[2].innerText;
-            text += `${mac}\t${ms}\t${iy}\n`;
+            let name = cells[0].innerText.trim();
+            let ms = cells[1].innerText.trim();
+            let iy = cells[2].innerText.trim();
+            
+            // İsimleri sağdan boşlukla doldurarak sütunları hizala
+            let paddedName = name.padEnd(maxLength + 2, ' ');
+            text += `${paddedName}\t${ms}\t${iy}\n`;
         }
     });
 
     if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste hizada kopyalandı!"));
+        navigator.clipboard.writeText(text).then(() => alert("Hizalı liste kopyalandı!"));
     } else {
         alert("Kopyalanacak veri yok.");
     }
