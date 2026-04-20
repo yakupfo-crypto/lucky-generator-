@@ -21,7 +21,7 @@
 <body>
 
 <div class="container">
-    <textarea id="rawInput" placeholder="Karışık metni buraya yapıştırın... (Örn: Takım A 2-1 Takım B İY 1-0)"></textarea>
+    <textarea id="rawInput" placeholder="Karışık metni buraya yapıştırın..."></textarea>
     
     <div class="btn-group">
         <button class="btn-islem" onclick="islemYap()">LİSTEYİ DÜZELT VE SIRALA</button>
@@ -45,65 +45,64 @@ function islemYap() {
     const input = document.getElementById('rawInput').value;
     const lines = input.split('\n');
     const tbody = document.getElementById('sonucAlani');
-    tbody.innerHTML = '';
+    let outputHtml = '';
 
     lines.forEach(line => {
-        line = line.trim();
-        if (line.length < 3) return;
+        let text = line.trim();
+        if (!text) return;
 
-        // Skorları bul (0-0 veya 1-2 gibi)
-        let scores = line.match(/\d+-\d+/g);
-        let msScore = "-";
-        let iyScore = "-";
+        // Skorları bul (0-0, 1-2, E-E gibi)
+        // Global arama yaparak satırdaki tüm skorları topluyoruz
+        let scores = text.match(/\d+-\d+|E-E/g);
+        
+        if (scores && scores.length >= 1) {
+            let ms = scores[0];
+            let iy = scores.length > 1 ? scores[1] : "-";
 
-        if (scores) {
-            msScore = scores[0]; // İlk bulunan skor MS'dir
-            if (scores.length > 1) {
-                iyScore = scores[1]; // İkinci bulunan skor İY'dir
+            // Takım isimlerini temizle (Skorları, saatleri ve MS/İY yazılarını at)
+            let matchName = text
+                .replace(/\d{2}:\d{2}/g, '') // Saatleri sil
+                .replace(/\d+-\d+|E-E/g, '') // Skorları sil
+                .replace(/\b(MS|İY|IY|I\.Y|İ\.Y)\b/gi, '') // MS/İY yazılarını sil
+                .replace(/[☆✩✰]/g, '') // Yıldızları sil
+                .replace(/\s\s+/g, ' ') // Çift boşlukları temizle
+                .trim();
+
+            // Eğer takım ismi boş değilse tabloya ekle
+            if (matchName.length > 1) {
+                outputHtml += `
+                    <tr>
+                        <td>${matchName}</td>
+                        <td style="text-align:center"><span class="skor-kutusu">${ms}</span></td>
+                        <td style="text-align:center; color:#888;">${iy}</td>
+                    </tr>`;
             }
-        } else if (line.includes("E-E")) {
-            msScore = "E-E";
-            iyScore = "E-E";
-        }
-
-        // Maç ismini temizle (Skorları, saatleri ve "MS/İY" yazılarını kaldır)
-        let matchName = line
-            .replace(/\d+-\d+/g, '') // Skorları sil
-            .replace(/\d{2}:\d{2}/g, '') // Saatleri sil
-            .replace(/\b(MS|İY|iy|ms|İy|Ms)\b/g, '') // Terimleri sil
-            .replace(/[()]/g, '') // Parantezleri sil
-            .replace(/\s+/g, ' ') // Fazla boşlukları temizle
-            .trim();
-
-        // Eğer satırda skor yoksa ama " - " varsa (boş maç satırı) veya skor varsa ekle
-        if (msScore !== "-" || matchName.includes("-")) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${matchName}</td>
-                <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
-                <td style="text-align:center; color:#888;">${iyScore}</td>
-            `;
-            tbody.appendChild(row);
         }
     });
+
+    tbody.innerHTML = outputHtml;
 }
 
 function tabloyuKopyala() {
     const tbody = document.getElementById('sonucAlani');
     const rows = tbody.querySelectorAll('tr');
     let kopyalanacakMetin = "";
-
+    
     rows.forEach(row => {
         let mac = row.cells[0].innerText;
         let ms = row.cells[1].innerText;
         let iy = row.cells[2].innerText;
-        kopyalanacakMetin += `${mac}\tMS: ${ms}\tİY: ${iy}\n`;
+        kopyalanacakMetin += `${mac}\t${ms}\t${iy}\n`;
     });
 
-    if (!kopyalanacakMetin) { alert("Liste boş!"); return; }
+    if (kopyalanacakMetin.trim() === "") {
+        alert("Kopyalanacak veri bulunamadı."); return;
+    }
 
-    navigator.clipboard.writeText(kopyalanacakMetin).then(() => {
-        alert("Liste başarıyla kopyalandı!");
+    navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
+        alert("Liste kopyalandı!");
+    }).catch(err => {
+        console.error('Hata:', err);
     });
 }
 </script>
