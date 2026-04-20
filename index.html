@@ -13,9 +13,9 @@
         .btn-islem { background: #00c853; color: black; }
         .btn-islem:active { transform: scale(0.98); }
         .btn-kopyala { background: #03a9f4; color: white; }
-        table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; table-layout: fixed; }
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
-        td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
+        td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
     </style>
 </head>
@@ -32,9 +32,9 @@
     <table id="skorTablosu">
         <thead>
             <tr>
-                <th>MAÇ</th>
-                <th style="text-align:center">MS</th>
-                <th style="text-align:center">İY</th>
+                <th style="width: 60%;">MAÇ</th>
+                <th style="width: 20%; text-align:center">MS</th>
+                <th style="width: 20%; text-align:center">İY</th>
             </tr>
         </thead>
         <tbody id="sonucAlani"></tbody>
@@ -44,43 +44,52 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    // Satırları ayır ve boş olmayanları al
     const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const tbody = document.getElementById('sonucAlani');
     const fragment = document.createDocumentFragment();
+    const scoreRegex = /(\d+-\d+|E-E)/g;
+    
     tbody.innerHTML = '';
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
-        
-        // Skor formatlarını (0-0, 1-2, E-E vb.) yakala
-        const scoreRegex = /(\d+-\d+|E-E)/g;
         let scores = line.match(scoreRegex) || [];
         
-        // Eğer bu satırda hiç skor yoksa ama bir sonraki satır sadece skorsa, onu al
-        if (scores.length === 0 && i + 1 < lines.length) {
-            let nextLineScores = lines[i+1].match(/^(\d+-\d+|E-E)$/g);
-            if (nextLineScores) {
-                scores = nextLineScores;
-                i++; // Alt satırı kullandığımız için atla
+        // MAÇ ADINI TEMİZLE (Skor aramadan önce ismini sakla)
+        let matchName = line
+            .replace(scoreRegex, '')
+            .replace(/\d{2}:\d{2}/g, '')
+            .replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı)\b/gi, '')
+            .replace(/[☆✩✰*]/g, '')
+            .replace(/\s\s+/g, ' ')
+            .trim();
+
+        // Eğer bu satırda skor yoksa ama isim varsa, sonraki satırlarda skor ara
+        if (scores.length === 0 && matchName.length > 2) {
+            for(let j = 1; j <= 2; j++) {
+                if(i + j < lines.length) {
+                    let nextScores = lines[i+j].match(scoreRegex);
+                    if(nextScores) {
+                        scores = nextScores;
+                        // Eğer bu döngüde skoru bulursak ana döngüyü kaydırabiliriz (isteğe bağlı)
+                        break;
+                    }
+                }
             }
         }
 
-        if (scores.length > 0) {
+        if (scores.length > 0 && matchName.length > 2) {
             let msScore = scores[0]; 
             let iyScore = scores.length > 1 ? scores[1] : "-";
 
-            // Takım isimlerini temizleme mantığı
-            let matchName = line
-                .replace(scoreRegex, '') // Skorları sil
-                .replace(/\d{2}:\d{2}/g, '') // Saatleri sil
-                .replace(/\b(MS|İY|IY|İyi|Iyi)\b/gi, '') // Durum belirteçlerini sil
-                .replace(/[☆✩✰*]/g, '') // Gereksiz sembolleri sil
-                .replace(/\s\s+/g, ' ') // Fazla boşlukları temizle
-                .trim();
-
-            // Eğer isim çok kısaysa muhtemelen hatalı satırdır, atla
-            if (matchName.length < 2) continue;
+            // Eğer hala İY skoru yoksa ve bir sonraki satır sadece İY skoru barındırıyorsa çek
+            if (iyScore === "-" && i + 1 < lines.length) {
+                let nextLine = lines[i+1].trim();
+                let onlyScore = nextLine.match(/^(\d+-\d+)$/);
+                if (onlyScore) {
+                    iyScore = onlyScore[1];
+                }
+            }
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -92,7 +101,6 @@ function islemYap() {
         }
     }
     
-    // Performans için tek seferde ekle
     tbody.appendChild(fragment);
 }
 
@@ -108,7 +116,7 @@ function tabloyuKopyala() {
 
     if (text) {
         navigator.clipboard.writeText(text.trim()).then(() => {
-            alert("Liste başarıyla kopyalandı!");
+            alert("Liste eksiksiz kopyalandı!");
         });
     } else {
         alert("Kopyalanacak veri bulunamadı.");
