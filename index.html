@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skor Düzenleyici PRO - Kesintisiz</title>
+    <title>Skor Düzenleyici PRO</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 10px; }
         .container { max-width: 900px; margin: auto; }
-        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; resize: vertical; }
+        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
         button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; transition: 0.2s; }
         .btn-islem { background: #00c853; color: black; }
@@ -18,7 +18,6 @@
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
-        .iy-skor { color: #888; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -34,7 +33,7 @@
     <table id="skorTablosu">
         <thead>
             <tr>
-                <th>MAÇ BİLGİSİ</th>
+                <th>MAÇ</th>
                 <th style="text-align:center">MS</th>
                 <th style="text-align:center">İY</th>
             </tr>
@@ -46,40 +45,43 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    const lines = input.split('\n');
+    const lines = input.split('\n').filter(l => l.trim().length > 0);
     const tbody = document.getElementById('sonucAlani');
-    let htmlContent = '';
+    tbody.innerHTML = '';
 
     lines.forEach(line => {
-        let text = line.trim();
-        if (text.length === 0) return; // Boş satırları atla
-
-        // 1. Skorları ayıkla (0-0 veya 1-2 formatı)
-        let scores = text.match(/\d+-\d+/g) || [];
+        // Skorları bul (0-0, 1-2 veya E-E formatı)
+        let scores = line.match(/(\d+-\d+|E-E)/g) || [];
         let msScore = scores[0] || "-";
         let iyScore = scores[1] || "-";
 
-        // 2. Metni temizle (Skorları, saatleri ve özel karakterleri kaldır)
-        let cleanText = text
-            .replace(/\d{2}:\d{2}/g, '') // Saatleri sil (20:45 gibi)
-            .replace(/\d+-\d+/g, '')     // Skorları sil
-            .replace(/[☆✩✰]/g, '')       // Yıldızları sil
-            .replace(/\s+/g, ' ')        // Fazla boşlukları teke düşür
-            .replace(/MS|İY/g, '')       // MS ve İY yazılarını sil
+        // Metni temizle: Skorları, saatleri ve özel karakterleri çıkar
+        let cleanText = line
+            .replace(/\d{2}:\d{2}/g, '') // Saatleri sil
+            .replace(/(\d+-\d+|E-E)/g, '') // Skorları sil
+            .replace(/[☆✩✰]/g, '') // Yıldızları sil
+            .replace(/\s+/g, ' ') // Fazla boşlukları temizle
             .trim();
 
-        // Eğer satırda sadece skor varsa ve isim yoksa "Maç Bilgisi Yok" demesin diye metni koru
-        if (cleanText === "" && text !== "") cleanText = text;
+        // Eğer satırda sadece skor kalmışsa veya çok kısaysa yine de ekle ama boş geçme
+        if (cleanText.length < 2 && msScore === "-") return;
 
-        htmlContent += `
-            <tr>
-                <td>${cleanText}</td>
-                <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
-                <td style="text-align:center"><span class="iy-skor">${iyScore}</span></td>
-            </tr>`;
+        // Maç ismini bölmeye çalış (genelde '-' ile ayrılır)
+        let matchName = cleanText;
+        if (cleanText.includes(" - ")) {
+            let parts = cleanText.split(" - ");
+            matchName = parts[0].trim() + " - " + (parts[1] ? parts[1].trim() : "");
+        }
+
+        // Tabloya hızlıca ekle
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${matchName}</td>
+            <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
+            <td style="text-align:center; color:#888;">${iyScore}</td>
+        `;
+        tbody.appendChild(tr);
     });
-
-    tbody.innerHTML = htmlContent;
 }
 
 function tabloyuKopyala() {
@@ -94,13 +96,13 @@ function tabloyuKopyala() {
         kopyalanacakMetin += `${mac}\t${ms}\t${iy}\n`;
     });
 
-    if (kopyalanacakMetin.trim() === "") {
+    if (!kopyalanacakMetin) {
         alert("Kopyalanacak veri bulunamadı."); 
         return;
     }
 
     navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
-        alert("Liste eksiksiz kopyalandı!");
+        alert("Liste kopyalandı!");
     });
 }
 </script>
