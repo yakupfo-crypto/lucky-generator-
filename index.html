@@ -7,15 +7,18 @@
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 10px; }
         .container { max-width: 900px; margin: auto; }
-        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; }
+        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; resize: vertical; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; }
+        button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; transition: 0.2s; }
         .btn-islem { background: #00c853; color: black; }
+        .btn-islem:hover { background: #00e676; }
         .btn-kopyala { background: #03a9f4; color: white; }
+        .btn-kopyala:hover { background: #29b6f6; }
         table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
+        .iy-skor { color: #888; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -45,64 +48,65 @@ function islemYap() {
     const input = document.getElementById('rawInput').value;
     const lines = input.split('\n');
     const tbody = document.getElementById('sonucAlani');
-    let outputHtml = '';
+    let htmlContent = '';
 
     lines.forEach(line => {
         let text = line.trim();
-        if (!text) return;
+        if (!text || text.length < 3) return;
 
-        // Skorları bul (0-0, 1-2, E-E gibi)
-        // Global arama yaparak satırdaki tüm skorları topluyoruz
-        let scores = text.match(/\d+-\d+|E-E/g);
-        
-        if (scores && scores.length >= 1) {
-            let ms = scores[0];
-            let iy = scores.length > 1 ? scores[1] : "-";
+        // Skorları bul (0-0 veya 1-2 gibi)
+        let scores = text.match(/\d+-\d+/g);
+        let msScore = "-";
+        let iyScore = "-";
 
-            // Takım isimlerini temizle (Skorları, saatleri ve MS/İY yazılarını at)
-            let matchName = text
-                .replace(/\d{2}:\d{2}/g, '') // Saatleri sil
-                .replace(/\d+-\d+|E-E/g, '') // Skorları sil
-                .replace(/\b(MS|İY|IY|I\.Y|İ\.Y)\b/gi, '') // MS/İY yazılarını sil
-                .replace(/[☆✩✰]/g, '') // Yıldızları sil
-                .replace(/\s\s+/g, ' ') // Çift boşlukları temizle
-                .trim();
-
-            // Eğer takım ismi boş değilse tabloya ekle
-            if (matchName.length > 1) {
-                outputHtml += `
-                    <tr>
-                        <td>${matchName}</td>
-                        <td style="text-align:center"><span class="skor-kutusu">${ms}</span></td>
-                        <td style="text-align:center; color:#888;">${iy}</td>
-                    </tr>`;
+        if (scores) {
+            msScore = scores[0]; // İlk bulunan genelde MS'dir
+            if (scores.length > 1) {
+                iyScore = scores[scores.length - 1]; // Son bulunan genelde İY'dir
             }
+        } else if (text.includes("E-E")) {
+            msScore = "E";
+            iyScore = "E";
         }
+
+        // Temizleme: Metinden skorları, saatleri ve gereksiz ibareleri çıkar
+        let cleanName = text
+            .replace(/\d+-\d+/g, '') // Skorları sil
+            .replace(/\d{2}:\d{2}/g, '') // Saatleri sil
+            .replace(/İY|MS|Sona Erdi|Bitti|E-E|\[|\]/g, '') // Gereksiz kelimeleri sil
+            .replace(/[☆✩✰]/g, '') // Yıldızları sil
+            .replace(/\s\s+/g, ' ') // Çift boşlukları teke indir
+            .trim();
+
+        // Eğer sadece skor kaldıysa veya isim çok kısaysa atla
+        if (cleanName.length < 2) return;
+
+        htmlContent += `
+            <tr>
+                <td>${cleanName}</td>
+                <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
+                <td style="text-align:center" class="iy-skor">${iyScore}</td>
+            </tr>`;
     });
 
-    tbody.innerHTML = outputHtml;
+    tbody.innerHTML = htmlContent;
 }
 
 function tabloyuKopyala() {
-    const tbody = document.getElementById('sonucAlani');
-    const rows = tbody.querySelectorAll('tr');
-    let kopyalanacakMetin = "";
+    const rows = document.querySelectorAll('#sonucAlani tr');
+    let textOut = "";
     
     rows.forEach(row => {
-        let mac = row.cells[0].innerText;
-        let ms = row.cells[1].innerText;
-        let iy = row.cells[2].innerText;
-        kopyalanacakMetin += `${mac}\t${ms}\t${iy}\n`;
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 3) {
+            textOut += `${cells[0].innerText}\t${cells[1].innerText}\t${cells[2].innerText}\n`;
+        }
     });
 
-    if (kopyalanacakMetin.trim() === "") {
-        alert("Kopyalanacak veri bulunamadı."); return;
-    }
+    if (!textOut) return alert("Liste boş!");
 
-    navigator.clipboard.writeText(kopyalanacakMetin.trim()).then(() => {
+    navigator.clipboard.writeText(textOut.trim()).then(() => {
         alert("Liste kopyalandı!");
-    }).catch(err => {
-        console.error('Hata:', err);
     });
 }
 </script>
