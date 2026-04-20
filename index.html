@@ -44,54 +44,60 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    const lines = input.split('\n').filter(l => l.trim().length > 0);
+    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const tbody = document.getElementById('sonucAlani');
     const fragment = document.createDocumentFragment();
     tbody.innerHTML = '';
 
+    let matches = [];
+    let currentMatch = null;
+
     for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].trim();
-        
-        // Skor yakalama (MS ve İY)
-        const matches = line.match(/(\d+-\d+|E-E)/g);
-        
-        if (matches) {
-            let msScore = matches[0];
-            let iyScore = matches.length > 1 ? matches[1] : "-";
+        let line = lines[i];
 
-            // Eğer satırda İY yoksa, bir sonraki satıra bak (sadece skor mu diye)
-            if (iyScore === "-" && i + 1 < lines.length) {
-                const nextLine = lines[i+1].trim();
-                const nextMatch = nextLine.match(/^(\d+-\d+)$/);
-                if (nextMatch) {
-                    iyScore = nextMatch[1];
-                    i++; 
-                }
+        // 1. Skor tespiti (X-X veya E-E)
+        let scoreMatch = line.match(/(\d+-\d+|E-E)/g);
+
+        if (scoreMatch) {
+            if (currentMatch) {
+                // Eğer zaten bir maç ismimiz varsa, bulunan skorları ona ata
+                scoreMatch.forEach(s => {
+                    if (currentMatch.ms === "-") currentMatch.ms = s;
+                    else if (currentMatch.iy === "-") currentMatch.iy = s;
+                });
             }
-
-            // Takım isimlerini daha hassas temizle
-            let matchName = line
-                .replace(/(\d+-\d+|E-E)/g, '') // Skorları sil
-                .replace(/\d{2}:\d{2}/g, '')    // Saatleri sil
-                .replace(/\bMS\b/i, '')        // MS yazısını sil
-                .replace(/\bİY\b/i, '')        // İY yazısını sil
-                .replace(/[☆✩✰*]/g, '')        // Simgeleri sil
-                .replace(/\s+/g, ' ')          // Fazla boşlukları temizle
+        } else {
+            // 2. Takım ismi tespiti (Saat, tarih gibi verileri ele)
+            let cleanLine = line
+                .replace(/\d{2}:\d{2}/g, '')
+                .replace(/\b(MS|İY|İptal|Ertelendi)\b/gi, '')
+                .replace(/[☆✩✰]/g, '')
                 .trim();
 
-            // Boş kalan veya sadece "-" olan isimleri atla ama geri kalan her şeyi yaz
-            if (!matchName || matchName === "-") continue;
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${matchName}</td>
-                <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
-                <td style="text-align:center; color:#888;">${iyScore}</td>
-            `;
-            fragment.appendChild(tr);
+            // Eğer satırda en az bir " - " varsa veya harf yoğunluğu fazlaysa bu bir maç adıdır
+            if (cleanLine.length > 3 && !/^\d+$/.test(cleanLine)) {
+                // Önceki maç bittiyse (veya ilk defa başlıyorsa) yeni obje aç
+                if (currentMatch && currentMatch.ms !== "-") {
+                    matches.push(currentMatch);
+                }
+                currentMatch = { name: cleanLine, ms: "-", iy: "-" };
+            }
         }
     }
-    
+    // Son maçı ekle
+    if (currentMatch) matches.push(currentMatch);
+
+    // DOM'a hızlıca yazdır
+    matches.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${m.name}</td>
+            <td style="text-align:center"><span class="skor-kutusu">${m.ms}</span></td>
+            <td style="text-align:center; color:#888;">${m.iy}</td>
+        `;
+        fragment.appendChild(tr);
+    });
+
     tbody.appendChild(fragment);
 }
 
@@ -108,7 +114,7 @@ function tabloyuKopyala() {
     if (text) {
         navigator.clipboard.writeText(text.trim()).then(() => alert("Liste kopyalandı!"));
     } else {
-        alert("Kopyalanacak veri bulunamadı.");
+        alert("Kopyalanacak veri yok.");
     }
 }
 </script>
