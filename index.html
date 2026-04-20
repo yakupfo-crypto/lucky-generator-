@@ -7,16 +7,17 @@
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 10px; }
         .container { max-width: 900px; margin: auto; }
-        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; }
+        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; resize: vertical; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
         button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; transition: 0.2s; }
         .btn-islem { background: #00c853; color: black; }
-        .btn-islem:hover { background: #00e676; }
+        .btn-islem:hover { background: #00e676; opacity: 0.9; }
         .btn-kopyala { background: #03a9f4; color: white; }
         table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
+        .iy-skor { color: #888; font-style: italic; }
     </style>
 </head>
 <body>
@@ -44,60 +45,45 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    // Satırları temizle ama veriyi kaybetmemek için boşlukları koru
+    const lines = input.split('\n').filter(l => l.trim().length > 0);
     const tbody = document.getElementById('sonucAlani');
     const fragment = document.createDocumentFragment();
     tbody.innerHTML = '';
 
-    let matches = [];
-    let currentMatch = null;
+    lines.forEach((line) => {
+        // 1. Skorları yakala (Örn: 2-1, 0-0, E-E)
+        const scores = line.match(/(\d+-\d+|E-E)/g);
+        
+        if (scores && scores.length >= 1) {
+            let ms = scores[0];
+            let iy = scores[1] || "-"; // Eğer aynı satırda ikinci skor varsa İY'dir
 
-    for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-
-        // 1. Skor tespiti (X-X veya E-E)
-        let scoreMatch = line.match(/(\d+-\d+|E-E)/g);
-
-        if (scoreMatch) {
-            if (currentMatch) {
-                // Eğer zaten bir maç ismimiz varsa, bulunan skorları ona ata
-                scoreMatch.forEach(s => {
-                    if (currentMatch.ms === "-") currentMatch.ms = s;
-                    else if (currentMatch.iy === "-") currentMatch.iy = s;
-                });
-            }
-        } else {
-            // 2. Takım ismi tespiti (Saat, tarih gibi verileri ele)
-            let cleanLine = line
-                .replace(/\d{2}:\d{2}/g, '')
-                .replace(/\b(MS|İY|İptal|Ertelendi)\b/gi, '')
-                .replace(/[☆✩✰]/g, '')
+            // 2. Takım isimlerini temizle
+            // Skorları, saatleri (00:00), "MS", "İY" ve yıldızları temizle
+            let matchName = line
+                .replace(/(\d+-\d+|E-E)/g, ' ') 
+                .replace(/\d{2}:\d{2}/g, ' ')
+                .replace(/\b(MS|İY|İy|iy|ms)\b/g, ' ')
+                .replace(/[☆✩✰*]/g, '')
+                .replace(/\s\s+/g, ' ') // Fazla boşlukları tek boşluğa indir
                 .trim();
 
-            // Eğer satırda en az bir " - " varsa veya harf yoğunluğu fazlaysa bu bir maç adıdır
-            if (cleanLine.length > 3 && !/^\d+$/.test(cleanLine)) {
-                // Önceki maç bittiyse (veya ilk defa başlıyorsa) yeni obje aç
-                if (currentMatch && currentMatch.ms !== "-") {
-                    matches.push(currentMatch);
-                }
-                currentMatch = { name: cleanLine, ms: "-", iy: "-" };
-            }
-        }
-    }
-    // Son maçı ekle
-    if (currentMatch) matches.push(currentMatch);
+            // Eğer isim temizleme sonrası boş kalırsa veya çok kısaysa atla
+            if (matchName.length < 2 || matchName === "-") return;
 
-    // DOM'a hızlıca yazdır
-    matches.forEach(m => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${m.name}</td>
-            <td style="text-align:center"><span class="skor-kutusu">${m.ms}</span></td>
-            <td style="text-align:center; color:#888;">${m.iy}</td>
-        `;
-        fragment.appendChild(tr);
+            // 3. Tablo satırını oluştur
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${matchName}</td>
+                <td style="text-align:center"><span class="skor-kutusu">${ms}</span></td>
+                <td style="text-align:center" class="iy-skor">${iy}</td>
+            `;
+            fragment.appendChild(tr);
+        }
     });
 
+    // Tek seferde DOM'a ekle (En hızlı yöntem)
     tbody.appendChild(fragment);
 }
 
@@ -106,15 +92,21 @@ function tabloyuKopyala() {
     let text = "";
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
-        if(cells.length === 3) {
+        if(cells.length >= 3) {
+            // Maç ismi, MS ve İY arasına sekme (TAB) koyarak birleştir
             text += `${cells[0].innerText}\t${cells[1].innerText}\t${cells[2].innerText}\n`;
         }
     });
 
     if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste kopyalandı!"));
+        navigator.clipboard.writeText(text.trim()).then(() => {
+            const btn = document.querySelector('.btn-kopyala');
+            const originalText = btn.innerText;
+            btn.innerText = "KOPYALANDI!";
+            setTimeout(() => btn.innerText = originalText, 2000);
+        });
     } else {
-        alert("Kopyalanacak veri yok.");
+        alert("Kopyalanacak veri bulunamadı.");
     }
 }
 </script>
