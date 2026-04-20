@@ -9,7 +9,7 @@
         .container { max-width: 900px; margin: auto; }
         textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; transition: 0.3s; }
+        button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; transition: 0.2s; }
         .btn-islem { background: #00c853; color: black; }
         .btn-islem:hover { background: #00e676; }
         .btn-kopyala { background: #03a9f4; color: white; }
@@ -44,40 +44,43 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const lines = input.split('\n').filter(l => l.trim().length > 0);
     const tbody = document.getElementById('sonucAlani');
     const fragment = document.createDocumentFragment();
     tbody.innerHTML = '';
 
     for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
+        let line = lines[i].trim();
         
-        // Skorları (X-X veya E-E formatında) bul
+        // Skor yakalama (MS ve İY)
         const matches = line.match(/(\d+-\d+|E-E)/g);
         
         if (matches) {
             let msScore = matches[0];
             let iyScore = matches.length > 1 ? matches[1] : "-";
 
-            // Eğer satırda sadece MS varsa ve bir sonraki satırda İY skoru gizliyse kontrol et
+            // Eğer satırda İY yoksa, bir sonraki satıra bak (sadece skor mu diye)
             if (iyScore === "-" && i + 1 < lines.length) {
-                const nextLineMatch = lines[i+1].match(/^(\d+-\d+)$/);
-                if (nextLineMatch) {
-                    iyScore = nextLineMatch[1];
-                    i++; // Sonraki satırı tükettik
+                const nextLine = lines[i+1].trim();
+                const nextMatch = nextLine.match(/^(\d+-\d+)$/);
+                if (nextMatch) {
+                    iyScore = nextMatch[1];
+                    i++; 
                 }
             }
 
-            // Takım isimlerini temizle (Skorları, saatleri ve "MS" ibaresini at)
+            // Takım isimlerini daha hassas temizle
             let matchName = line
-                .replace(/(\d+-\d+|E-E)/g, '')
-                .replace(/\d{2}:\d{2}/g, '')
-                .replace(/\bMS\b/g, '')
-                .replace(/[☆✩✰]/g, '')
+                .replace(/(\d+-\d+|E-E)/g, '') // Skorları sil
+                .replace(/\d{2}:\d{2}/g, '')    // Saatleri sil
+                .replace(/\bMS\b/i, '')        // MS yazısını sil
+                .replace(/\bİY\b/i, '')        // İY yazısını sil
+                .replace(/[☆✩✰*]/g, '')        // Simgeleri sil
+                .replace(/\s+/g, ' ')          // Fazla boşlukları temizle
                 .trim();
 
-            // Eğer temizlemeden sonra isim çok kısaysa (veya sadece tire kaldıysa) düzelt
-            if (matchName === "-" || matchName.length < 3) continue;
+            // Boş kalan veya sadece "-" olan isimleri atla ama geri kalan her şeyi yaz
+            if (!matchName || matchName === "-") continue;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -88,6 +91,7 @@ function islemYap() {
             fragment.appendChild(tr);
         }
     }
+    
     tbody.appendChild(fragment);
 }
 
@@ -96,13 +100,15 @@ function tabloyuKopyala() {
     let text = "";
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
-        text += `${cells[0].innerText}\t${cells[1].innerText}\t${cells[2].innerText}\n`;
+        if(cells.length === 3) {
+            text += `${cells[0].innerText}\t${cells[1].innerText}\t${cells[2].innerText}\n`;
+        }
     });
 
     if (text) {
         navigator.clipboard.writeText(text.trim()).then(() => alert("Liste kopyalandı!"));
     } else {
-        alert("Kopyalanacak veri yok.");
+        alert("Kopyalanacak veri bulunamadı.");
     }
 }
 </script>
