@@ -13,32 +13,14 @@
         .btn-islem { background: #00c853; color: black; }
         .btn-islem:active { transform: scale(0.98); }
         .btn-kopyala { background: #03a9f4; color: white; }
-        
         table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; table-layout: fixed; }
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
-        td { padding: 12px 5px; border-bottom: 1px solid #2d2d2d; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        td { padding: 12px 5px; border-bottom: 1px solid #2d2d2d; font-size: 14px; vertical-align: middle; }
+        .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; display: inline-block; min-width: 35px; text-align: center; }
         
-        .skor-kutusu { 
-            display: inline-block;
-            width: 45px; /* Skor kutusunun genişliğini sabitledim */
-            background: #333; 
-            padding: 4px 0; 
-            border-radius: 4px; 
-            color: #ffeb3b; 
-            font-weight: bold; 
-            text-align: center;
-            font-family: 'Courier New', monospace; /* Rakamların hizası için sabit aralıklı font */
-        }
-        
-        /* Sütun Hizalamaları */
-        .col-mac { width: 70%; }
-        .col-skor { width: 15%; text-align: center; }
-        .iy-metin { 
-            display: inline-block;
-            width: 45px; 
-            text-align: center; 
-            font-family: 'Courier New', monospace; 
-        }
+        /* MS ve İY sütunlarını yukarıdan aşağıya ve yanlardan tam hizalı yapan ayarlar */
+        .col-mac { width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .col-skor { width: 15%; text-align: center; } 
     </style>
 </head>
 <body>
@@ -109,7 +91,7 @@ function islemYap() {
             tr.innerHTML = `
                 <td class="col-mac">${matchName}</td>
                 <td class="col-skor"><span class="skor-kutusu">${msScore}</span></td>
-                <td class="col-skor" style="color:#888;"><span class="iy-metin">${iyScore}</span></td>
+                <td class="col-skor" style="color:#888;">${iyScore}</td>
             `;
             fragment.appendChild(tr);
         }
@@ -123,8 +105,11 @@ function tabloyuKopyala() {
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length === 3) {
-            // Kopyalandığında hizalı durması için tab tuşu (\t) kullanır
-            text += `${cells[0].innerText.trim()}\t${cells[1].innerText.trim()}\t${cells[2].innerText.trim()}\n`;
+            // Kopyalandığında hizanın bozulmaması için maç ismini sabit boşlukla ayırır
+            let mac = cells[0].innerText.padEnd(40, ' ');
+            let ms = cells[1].innerText.padEnd(10, ' ');
+            let iy = cells[2].innerText;
+            text += `${mac}\t${ms}\t${iy}\n`;
         }
     });
 
