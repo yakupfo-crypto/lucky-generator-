@@ -18,6 +18,7 @@
         td { padding: 12px 5px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         
+        /* Sütunları birbirine en yakın mesafeye getiren ayarlar */
         .col-mac { width: auto; }
         .col-skor { width: 1px; white-space: nowrap; text-align: center; padding-left: 2px; padding-right: 2px; } 
     </style>
@@ -100,22 +101,27 @@ function islemYap() {
 
 function tabloyuKopyala() {
     const rows = document.querySelectorAll('#sonucAlani tr');
-    let text = "";
+    let copyText = "";
+    
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length === 3) {
-            // Veriyi tam olarak sütun dizilişiyle (Maç MS İY) ve aralarda tek boşluk olacak şekilde birleştirir
-            let mac = cells[0].innerText.trim();
-            let ms = cells[1].innerText.trim();
-            let iy = cells[2].innerText.trim();
-            text += `${mac} ${ms} ${iy}\n`;
+            const mac = cells[0].innerText.trim();
+            const ms = cells[1].innerText.trim();
+            const iy = cells[2].innerText.trim();
+            // Birebir aynı diziliş için aralara tab (\t) koyarak satır oluşturur
+            copyText += `${mac}\t${ms}\t${iy}\n`;
         }
     });
 
-    if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste tam dizilişle kopyalandı!"));
+    if (copyText) {
+        navigator.clipboard.writeText(copyText.trim()).then(() => {
+            alert("Liste birebir aynı dizilişle kopyalandı!");
+        }).catch(err => {
+            console.error('Kopyalama hatası:', err);
+        });
     } else {
-        alert("Kopyalanacak veri yok.");
+        alert("Kopyalanacak veri yok. Önce listeyi düzeltin.");
     }
 }
 </script>
