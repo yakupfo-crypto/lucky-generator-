@@ -58,44 +58,40 @@ function islemYap() {
         let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
         let currentScores = currentLine.match(scoreRegex);
 
-        // 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: İY, 3: Deplasman)
+        // ÖZEL 3 SATIRLI KONTROL (1: Ev+MS, 2: Deplasman, 3: İY)
         if (currentScores && i + 2 < lines.length) {
-            let nextLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+            let secondLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             
-            let nextLineScores = nextLine.match(scoreRegex);
+            let secondLineScores = secondLine.match(scoreRegex);
             let thirdLineScores = thirdLine.match(scoreRegex);
 
-            // Eğer 1. satırda skor varsa, 2. satır sadece skorsa ve 3. satırda skor yoksa (takım ismiyse)
-            if (currentScores.length === 1 && nextLineScores && !thirdLineScores) {
+            // Mantık: 1. satırda skor var, 2. satırda skor YOK (takım adı), 3. satırda skor VAR (İY skoru)
+            if (currentScores.length === 1 && !secondLineScores && thirdLineScores) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let awayTeam = thirdLine.trim();
+                let awayTeam = secondLine.trim();
                 let msScore = currentScores[0];
-                let iyScore = nextLineScores[0];
+                let iyScore = thirdLineScores[0];
 
                 ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
-                i += 2; // 3 satırı birden tükettik
+                i += 2; // 3 satırı paket olarak işledik
                 continue;
             }
         }
 
-        // STANDART TEK VEYA ÇİFT SATIRLI İŞLEME (Eski mantık korundu)
+        // STANDART AYIKLAMA MANTIĞI
         let matchName = currentLine.replace(scoreRegex, '').replace(/\d{2}:\d{2}/g, '').replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '').replace(/[☆✩✰*]/g, '').replace(/\s+/g, ' ').trim();
         let scores = currentScores || [];
 
-        if (scores.length === 0 && matchName.length > 3 && i + 1 < lines.length) {
-            let cleanNext = lines[i+1].replace(/(^-)|(-$)/g, '').trim();
-            let nextScores = cleanNext.match(scoreRegex);
-            if (nextScores) scores = nextScores;
+        // Eğer satırda skor yoksa alt satıra bak
+        if (scores.length === 0 && matchName.length > 2 && i + 1 < lines.length) {
+            let nextLineScores = lines[i+1].match(scoreRegex);
+            if (nextLineScores) scores = nextLineScores;
         }
 
-        if (scores.length > 0 && matchName.length > 3) {
+        if (scores.length > 0 && matchName.length > 2) {
             let ms = scores[0];
             let iy = scores.length > 1 ? scores[1] : "-";
-            if (iy === "-" && i + 1 < lines.length) {
-                let nextOnlyScore = lines[i+1].trim().replace(/(^-)|(-$)/g, '').trim();
-                if (nextOnlyScore.match(/^(\d+-\d+)$/)) iy = nextOnlyScore;
-            }
             ekle(matchName, ms, iy, fragment);
         }
     }
@@ -123,7 +119,7 @@ function tabloyuKopyala() {
     });
 
     if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste MS ve İY ibareleriyle kopyalandı!"));
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste kopyalandı!"));
     } else {
         alert("Kopyalanacak veri yok.");
     }
