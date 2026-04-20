@@ -31,7 +31,7 @@
     <table id="skorTablosu">
         <thead>
             <tr>
-                <th>MAÇ</th>
+                <th>MAÇ BİLGİSİ</th>
                 <th style="text-align:center">MS</th>
                 <th style="text-align:center">İY</th>
             </tr>
@@ -43,90 +43,50 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
+    // Boş olmayan tüm satırları alıyoruz
     const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const tbody = document.getElementById('sonucAlani');
     tbody.innerHTML = '';
 
-    for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
+    lines.forEach(line => {
+        // Skoru bul (Örn: 2-1 veya E-E)
+        let scores = line.match(/\d+-\d+|E-E/g) || [];
+        let msScore = scores[0] || "-";
+        let iyScore = scores[1] || "-";
 
-        const hasScore = /\d+-\d+/.test(line) || line.includes("E-E");
-        const hasTime = /\d{2}:\d{2}/.test(line);
+        // Satırdaki skorları ve zamanları (00:00) temizleyerek sadece takım isimlerini bırak
+        let cleanText = line
+            .replace(/\d+-\d+/g, '') // Skorları sil
+            .replace(/E-E/g, '')     // E-E ifadesini sil
+            .replace(/\d{2}:\d{2}/g, '') // Saatleri sil
+            .replace(/[☆✩✰]/g, '')   // Yıldızları sil
+            .replace(/\s+/g, ' ')    // Fazla boşlukları temizle
+            .trim();
 
-        // Maç satırı tespiti (Durum veya Başlık satırlarını eler)
-        if (hasScore || hasTime || line.includes(" - ")) {
-            let msScore = "-";
-            let iyScore = "-";
-
-            if (hasScore) {
-                let matches = line.match(/\d+-\d+|E-E/g); 
-                msScore = matches[0]; 
-
-                if (msScore !== "E-E" && matches.length > 1) {
-                    iyScore = matches[matches.length - 1];
-                } else if (msScore === "E-E") {
-                    msScore = "E"; iyScore = "E";
-                }
-
-                if (msScore !== "E" && iyScore === "-") {
-                    for (let j = 1; j <= 2; j++) {
-                        if (i + j < lines.length) {
-                            let nextLine = lines[i + j].trim();
-                            let subMatch = nextLine.match(/^(\d+-\d+)$/) || nextLine.match(/^İY\s*(\d+-\d+)$/);
-                            if (subMatch) {
-                                iyScore = subMatch[1] || subMatch[0];
-                                i = i + j; break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            let tempLine = line;
-            let removeItems = line.match(/\d+-\d+|E-E|\d{2}:\d{2}/g) || [];
-            removeItems.forEach(m => { tempLine = tempLine.replace(m, ' SPLIT '); });
-            
-            let parts = tempLine.split(' SPLIT ');
-            let home = parts[0] ? parts[0].trim() : "";
-            let away = (parts[1] && parts[1].trim() !== "MS") ? parts[1].trim() : (parts[2] ? parts[2].trim() : "");
-
-            let cleanHome = home.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
-            let cleanAway = away.replace(/[☆✩✰]/g, '').replace(/\d+\sMS/g, '').replace(/MS/g, '').trim();
-
-            if(cleanHome.length < 2) continue;
-
-            let fullMatchName = cleanHome + (cleanAway ? " - " + cleanAway : "");
-
-            tbody.innerHTML += `
-                <tr>
-                    <td>${fullMatchName}</td>
-                    <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
-                    <td style="text-align:center; color:#888;">${iyScore}</td>
-                </tr>`;
+        // Eğer satırda hiçbir şey kalmadıysa (sadece skordan oluşuyorsa) orijinal satırı göster
+        if(cleanText === "" || cleanText === "-") {
+            cleanText = line;
         }
-    }
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${cleanText}</td>
+                <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
+                <td style="text-align:center; color:#888;">${iyScore}</td>
+            </tr>`;
+    });
 }
 
 function tabloyuKopyala() {
     const tbody = document.getElementById('sonucAlani');
     const rows = tbody.querySelectorAll('tr');
     let kopyalanacakMetin = "";
-    let maxMacUzunlugu = 0;
-
-    rows.forEach(row => {
-        if (row.cells.length === 3) {
-            let len = row.cells[0].innerText.length;
-            if (len > maxMacUzunlugu) maxMacUzunlugu = len;
-        }
-    });
 
     rows.forEach(row => {
         let mac = row.cells[0].innerText;
         let ms = row.cells[1].innerText;
         let iy = row.cells[2].innerText;
-        
-        let hizaliMac = mac.padEnd(maxMacUzunlugu + 4, ' ');
-        kopyalanacakMetin += `${hizaliMac}\t${ms}\t${iy}\n`;
+        kopyalanacakMetin += `${mac}\t${ms}\t${iy}\n`;
     });
 
     if (kopyalanacakMetin.trim() === "") {
