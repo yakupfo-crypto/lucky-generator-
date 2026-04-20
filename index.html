@@ -109,18 +109,14 @@ function tabloyuKopyala() {
             const ms = cells[1].innerText.trim();
             const iy = cells[2].innerText.trim();
             
-            // Yapıştırıldığında sütunların aynı hizada kalması için Tab (\t) kullanıyoruz
-            text += mac + "\t" + ms + "\t" + iy + "\n";
+            // Yapıştırılan yerde hizalı durması için tab karakteri (\t) kullanılır.
+            // Bu, Excel ve Word gibi programlarda otomatik olarak sütunları hizalar.
+            text += `${mac}\t${ms}\t${iy}\n`;
         }
     });
 
     if (text) {
-        // clipboard.writeText en güvenilir ve hızlı yöntemdir
-        navigator.clipboard.writeText(text).then(() => {
-            alert("Liste birebir hizalı şekilde kopyalandı!");
-        }).catch(err => {
-            console.error('Kopyalama hatası:', err);
-        });
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste hizada kopyalandı!"));
     } else {
         alert("Kopyalanacak veri yok.");
     }
