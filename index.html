@@ -19,7 +19,7 @@
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         
         .col-mac { width: auto; }
-        .col-skor { width: 60px; white-space: nowrap; text-align: center; } 
+        .col-skor { width: 1px; white-space: nowrap; text-align: center; padding-left: 2px; padding-right: 2px; } 
     </style>
 </head>
 <body>
@@ -102,33 +102,26 @@ function tabloyuKopyala() {
     const rows = document.querySelectorAll('#sonucAlani tr');
     let text = "";
     
-    // Sabit genişlik belirleme (Dizilişin bozulmaması için)
-    const macGenislik = 35; 
+    // Not defterinde hizalı durması için en uzun maç ismini buluyoruz
+    let maxLen = 0;
+    rows.forEach(row => {
+        const name = row.querySelectorAll('td')[0].innerText.trim();
+        if (name.length > maxLen) maxLen = name.length;
+    });
 
+    // Her satırı bu uzunluğa göre boşlukla doldurarak (padEnd) hizalıyoruz
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length === 3) {
-            let mac = cells[0].innerText.trim();
-            let ms = cells[1].innerText.trim();
-            let iy = cells[2].innerText.trim();
-            
-            // Maç ismini sabit genişliğe tamamla (boşluklarla hizala)
-            let macHizali = mac.padEnd(macGenislik, ' ');
-            
-            // MS ve İY arasına sabit 2 boşluk koyarak yan yana ve alt alta hizalı durmasını sağla
-            text += `${macHizali}   ${ms}   ${iy}\n`;
+            const matchName = cells[0].innerText.trim().padEnd(maxLen + 2, ' ');
+            const msScore = cells[1].innerText.trim().padEnd(6, ' ');
+            const iyScore = cells[2].innerText.trim();
+            text += `${matchName}${msScore}${iyScore}\n`;
         }
     });
 
     if (text) {
-        // Kopyalama alanına gönder
-        const hiddenInput = document.createElement('textarea');
-        hiddenInput.value = text;
-        document.body.appendChild(hiddenInput);
-        hiddenInput.select();
-        document.execCommand('copy');
-        document.body.removeChild(hiddenInput);
-        alert("Liste hizalı bir şekilde kopyalandı!");
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Not defteri için hizalı olarak kopyalandı!"));
     } else {
         alert("Kopyalanacak veri yok.");
     }
