@@ -17,6 +17,10 @@
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
         td { padding: 12px 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
+        
+        /* Sütun genişlikleri ve yaklaştırma ayarı */
+        .col-mac { width: auto; }
+        .col-skor { width: 45px; text-align: center; } /* Sütunları birbirine sabitleyen genişlik */
     </style>
 </head>
 <body>
@@ -32,9 +36,9 @@
     <table id="skorTablosu">
         <thead>
             <tr>
-                <th style="width: 60%;">MAÇ</th>
-                <th style="text-align:center">MS</th>
-                <th style="text-align:center">İY</th>
+                <th class="col-mac">MAÇ</th>
+                <th class="col-skor">MS</th>
+                <th class="col-skor">İY</th>
             </tr>
         </thead>
         <tbody id="sonucAlani"></tbody>
@@ -55,7 +59,6 @@ function islemYap() {
         let line = lines[i];
         let scores = line.match(scoreRegex) || [];
         
-        // Takım isimlerini temizle (Skor, saat ve MS/İY gibi ibareleri at)
         let matchName = line
             .replace(scoreRegex, '')
             .replace(/\d{2}:\d{2}/g, '')
@@ -64,13 +67,11 @@ function islemYap() {
             .replace(/\s\s+/g, ' ')
             .trim();
 
-        // Eğer satırda isim var ama skor yoksa, alt satıra bak (İY skoru aşağı kaymış olabilir)
         if (scores.length === 0 && matchName.length > 3) {
             if (i + 1 < lines.length) {
                 let nextLineScores = lines[i+1].match(scoreRegex);
                 if (nextLineScores) {
                     scores = nextLineScores;
-                    // Alt satırı tükettiğimizi işaretlemiyoruz çünkü alt satırda isim de olabilir
                 }
             }
         }
@@ -79,7 +80,6 @@ function islemYap() {
             let msScore = scores[0]; 
             let iyScore = scores.length > 1 ? scores[1] : "-";
 
-            // İY skoru hala yoksa ve bir alt satır sadece tek bir skor formatındaysa onu İY al
             if (iyScore === "-" && i + 1 < lines.length) {
                 let nextLine = lines[i+1].trim();
                 if (nextLine.match(/^(\d+-\d+)$/)) {
@@ -90,8 +90,8 @@ function islemYap() {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${matchName}</td>
-                <td style="text-align:center"><span class="skor-kutusu">${msScore}</span></td>
-                <td style="text-align:center; color:#888;">${iyScore}</td>
+                <td class="col-skor"><span class="skor-kutusu">${msScore}</span></td>
+                <td class="col-skor" style="color:#888;">${iyScore}</td>
             `;
             fragment.appendChild(tr);
         }
