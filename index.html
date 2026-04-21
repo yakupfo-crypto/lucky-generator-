@@ -58,33 +58,32 @@ function islemYap() {
         let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
         let currentScores = currentLine.match(scoreRegex);
 
-        // --- YENİ 3 SATIRLI YAPI KONTROLÜ (Ekran Görüntüsü 23:41) ---
-        // 1: Ev+MS, 2: Deplasman, 3: İY
-        if (currentScores && i + 2 < lines.length) {
-            let line2 = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
-            let line3 = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+        // 3 SATIRLI BLOK KONTROLLERİ
+        if (i + 2 < lines.length) {
+            let nextLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+            let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             
-            let line2Scores = line2.match(scoreRegex);
-            let line3Scores = line3.match(scoreRegex);
+            let nextScores = nextLine.match(scoreRegex);
+            let thirdScores = thirdLine.match(scoreRegex);
 
-            // Eğer 1. satırda skor var, 2. satırda skor YOK (Takım ismi), 3. satır sadece skorsa
-            if (currentScores.length === 1 && !line2Scores && line3Scores) {
+            // DURUM A: 1.Ev+MS, 2.Deplasman, 3.İY (Yeni İstek)
+            if (currentScores && !nextScores && thirdScores) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let awayTeam = line2;
+                let awayTeam = nextLine.trim();
                 let msScore = currentScores[0];
-                let iyScore = line3Scores[0];
+                let iyScore = thirdScores[0];
 
                 ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
                 i += 2; 
                 continue;
             }
-            
-            // Alternatif 3 Satırlı Yapı (Önceki: 1: Ev+MS, 2: İY, 3: Deplasman)
-            if (currentScores.length === 1 && line2Scores && !line3Scores) {
+
+            // DURUM B: 1.Ev+MS, 2.İY, 3.Deplasman (Önceki İstek)
+            if (currentScores && nextScores && !thirdScores) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let awayTeam = line3;
+                let awayTeam = thirdLine.trim();
                 let msScore = currentScores[0];
-                let iyScore = line2Scores[0];
+                let iyScore = nextScores[0];
 
                 ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
                 i += 2;
