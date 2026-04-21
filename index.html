@@ -58,7 +58,7 @@ function islemYap() {
         let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
         let currentScores = currentLine.match(scoreRegex);
 
-        // 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: Deplasman, 3: İY)
+        // 3 SATIRLI ÖZEL BLOK KONTROLÜ (1: Ev + MS, 2: Deplasman, 3: İY)
         if (currentScores && i + 2 < lines.length) {
             let nextLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
@@ -66,7 +66,7 @@ function islemYap() {
             let nextLineScores = nextLine.match(scoreRegex);
             let thirdLineScores = thirdLine.match(scoreRegex);
 
-            // Yeni yapı: 1. satır skorlu (Ev), 2. satır skorsuz (Deplasman), 3. satır skorlu (İY)
+            // Eğer 1. satırda skor varsa, 2. satırda skor YOKSA (Deplasman takımıysa) ve 3. satırda skor VARSA (İY ise)
             if (currentScores.length === 1 && !nextLineScores && thirdLineScores) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
                 let awayTeam = nextLine.trim();
@@ -74,11 +74,11 @@ function islemYap() {
                 let iyScore = thirdLineScores[0];
 
                 ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
-                i += 2; // 3 satırı işledik
+                i += 2; 
                 continue;
             }
             
-            // Alternatif yapı (Önceki 3 satırlı: 1: Ev+MS, 2: İY, 3: Deplasman)
+            // Alternatif Blok (1: Ev+MS, 2: İY, 3: Deplasman) - Eski desteği korumak için
             if (currentScores.length === 1 && nextLineScores && !thirdLineScores) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
                 let awayTeam = thirdLine.trim();
@@ -91,7 +91,7 @@ function islemYap() {
             }
         }
 
-        // STANDART TEK VEYA ÇİFT SATIRLI İŞLEME
+        // STANDART İŞLEME (Eski mantık)
         let matchName = currentLine.replace(scoreRegex, '').replace(/\d{2}:\d{2}/g, '').replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '').replace(/[☆✩✰*]/g, '').replace(/\s+/g, ' ').trim();
         let scores = currentScores || [];
 
@@ -135,7 +135,7 @@ function tabloyuKopyala() {
     });
 
     if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste MS ve İY ibareleriyle kopyalandı!"));
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste kopyalandı!"));
     } else {
         alert("Kopyalanacak veri yok.");
     }
