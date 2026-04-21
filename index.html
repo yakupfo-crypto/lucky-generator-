@@ -55,36 +55,33 @@ function islemYap() {
     tbody.innerHTML = '';
 
     for (let i = 0; i < lines.length; i++) {
-        let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
-        let currentLineScores = currentLine.match(scoreRegex);
+        let line1 = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+        let scores1 = line1.match(scoreRegex);
 
-        // 3 SATIRLI YAPI KONTROLÜ (Görseldeki Senaryo)
-        // 1. Satır: Ev Sahibi + MS (Skor var)
-        // 2. Satır: Deplasman (Skor yok)
-        // 3. Satır: İY (Sadece Skor var)
-        if (currentLineScores && i + 2 < lines.length) {
-            let secondLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
-            let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+        // ÖZEL 3 SATIRLI YAPI (1: Ev+MS, 2: Deplasman, 3: İY)
+        if (scores1 && scores1.length === 1 && i + 2 < lines.length) {
+            let line2 = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+            let line3 = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             
-            let secondLineScores = secondLine.match(scoreRegex);
-            let thirdLineScores = thirdLine.match(scoreRegex);
+            let scores2 = line2.match(scoreRegex);
+            let scores3 = line3.match(scoreRegex);
 
-            // Eğer 1. satırda MS varsa, 2. satırda skor yoksa (deplasman ismidir) ve 3. satır sadece skorsa (İY)
-            if (currentLineScores.length === 1 && !secondLineScores && thirdLineScores && thirdLineScores.length === 1) {
-                let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let awayTeam = secondLine;
-                let msScore = currentLineScores[0];
-                let iyScore = thirdLineScores[0];
+            // Eğer 2. satırda skor yoksa (takım ismiyse) ve 3. satır sadece skorsa (İY ise)
+            if (!scores2 && scores3 && scores3.length === 1) {
+                let evSahibi = line1.replace(scoreRegex, '').trim();
+                let deplasman = line2;
+                let msSkor = scores1[0];
+                let iySkor = scores3[0];
 
-                ekle(homeTeam + " " + awayTeam, msScore, iyScore, fragment);
-                i += 2; // 3 satırı paket olarak işledik, atlıyoruz
+                ekle(evSahibi + " " + deplasman, msSkor, iySkor, fragment);
+                i += 2; 
                 continue;
             }
         }
 
-        // STANDART / DİĞER DURUMLAR (Eğer yukarıdaki özel yapıya uymuyorsa)
-        let scores = currentLine.match(scoreRegex) || [];
-        let matchName = currentLine
+        // STANDART AYIKLAMA (Tek satır veya diğer kombinasyonlar)
+        let scores = line1.match(scoreRegex) || [];
+        let matchName = line1
             .replace(scoreRegex, '')
             .replace(/\d{2}:\d{2}/g, '')
             .replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '')
@@ -92,18 +89,19 @@ function islemYap() {
             .replace(/\s+/g, ' ')
             .trim();
 
+        if (scores.length === 0 && matchName.length > 3 && i + 1 < lines.length) {
+            let nextLineClean = lines[i+1].replace(/(^-)|(-$)/g, '').trim();
+            let nextScores = nextLineClean.match(scoreRegex);
+            if (nextScores) scores = nextScores;
+        }
+
         if (scores.length > 0 && matchName.length > 3) {
             let ms = scores[0];
             let iy = scores.length > 1 ? scores[1] : "-";
             
-            // Eğer İY yoksa ve alt satırda sadece skor varsa onu İY al
             if (iy === "-" && i + 1 < lines.length) {
                 let nextOnlyScore = lines[i+1].trim().replace(/(^-)|(-$)/g, '').trim();
-                if (nextOnlyScore.match(/^(\d+-\d+)$/)) {
-                    iy = nextOnlyScore;
-                    // Eğer bu satırı İY olarak kullandıysak bir sonraki döngüde atlamamak için 
-                    // i++ yapmıyoruz çünkü standart yapıda deplasman ismi de olabilir.
-                }
+                if (nextOnlyScore.match(/^(\d+-\d+)$/)) iy = nextOnlyScore;
             }
             ekle(matchName, ms, iy, fragment);
         }
