@@ -58,7 +58,7 @@ function islemYap() {
         let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
         let currentScores = currentLine.match(scoreRegex);
 
-        // YENİ 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: Deplasman, 3: İY)
+        // YENİ 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: Deplasman, 3: İY Skoru)
         if (currentScores && i + 2 < lines.length) {
             let secondLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
@@ -66,7 +66,7 @@ function islemYap() {
             let secondLineScores = secondLine.match(scoreRegex);
             let thirdLineScores = thirdLine.match(scoreRegex);
 
-            // Mantık: 1. satırda skor var, 2. satırda skor YOK (Takım ismi), 3. satırda skor var (İY)
+            // Eğer 1. satırda skor varsa (MS), 2. satırda skor yoksa (Deplasman İsmi) ve 3. satırda skor varsa (İY)
             if (currentScores.length === 1 && !secondLineScores && thirdLineScores) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
                 let awayTeam = secondLine.trim();
@@ -77,21 +77,9 @@ function islemYap() {
                 i += 2; 
                 continue;
             }
-            
-            // Alternatif 3 satırlı blok (Eski mantık: 1: Ev+MS, 2: İY, 3: Deplasman)
-            if (currentScores.length === 1 && secondLineScores && !thirdLineScores) {
-                let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let awayTeam = thirdLine.trim();
-                let msScore = currentScores[0];
-                let iyScore = secondLineScores[0];
-
-                ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
-                i += 2;
-                continue;
-            }
         }
 
-        // STANDART İŞLEME
+        // STANDART İŞLEME (Diğer durumlar için)
         let matchName = currentLine.replace(scoreRegex, '').replace(/\d{2}:\d{2}/g, '').replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '').replace(/[☆✩✰*]/g, '').replace(/\s+/g, ' ').trim();
         let scores = currentScores || [];
 
@@ -104,10 +92,6 @@ function islemYap() {
         if (scores.length > 0 && matchName.length > 3) {
             let ms = scores[0];
             let iy = scores.length > 1 ? scores[1] : "-";
-            if (iy === "-" && i + 1 < lines.length) {
-                let nextOnlyScore = lines[i+1].trim().replace(/(^-)|(-$)/g, '').trim();
-                if (nextOnlyScore.match(/^(\d+-\d+)$/)) iy = nextOnlyScore;
-            }
             ekle(matchName, ms, iy, fragment);
         }
     }
