@@ -56,52 +56,47 @@ function islemYap() {
 
     for (let i = 0; i < lines.length; i++) {
         let line1 = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
-        let scores1 = line1.match(scoreRegex);
+        let line1Scores = line1.match(scoreRegex);
 
-        // ÖZEL 3 SATIRLI YAPI (1: Ev+MS, 2: Deplasman, 3: İY)
-        if (scores1 && scores1.length === 1 && i + 2 < lines.length) {
+        // 3 SATIRLI ÖZEL YAPI KONTROLÜ:
+        // 1. Satır: Ev Sahibi + MS
+        // 2. Satır: Deplasman Takımı
+        // 3. Satır: İY Skoru
+        if (line1Scores && i + 2 < lines.length) {
             let line2 = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             let line3 = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             
-            let scores2 = line2.match(scoreRegex);
-            let scores3 = line3.match(scoreRegex);
+            let line2Scores = line2.match(scoreRegex);
+            let line3Scores = line3.match(scoreRegex);
 
-            // Eğer 2. satırda skor yoksa (takım ismiyse) ve 3. satır sadece skorsa (İY ise)
-            if (!scores2 && scores3 && scores3.length === 1) {
-                let evSahibi = line1.replace(scoreRegex, '').trim();
-                let deplasman = line2;
-                let msSkor = scores1[0];
-                let iySkor = scores3[0];
+            // Eğer 1. satırda skor varsa, 2. satırda skor YOKSA (takım ismidir) ve 3. satırda skor VARSA (İY'dir)
+            if (line1Scores.length === 1 && !line2Scores && line3Scores) {
+                let homeTeam = line1.replace(scoreRegex, '').trim();
+                let awayTeam = line2;
+                let msScore = line1Scores[0];
+                let iyScore = line3Scores[0];
 
-                ekle(evSahibi + " " + deplasman, msSkor, iySkor, fragment);
-                i += 2; 
+                ekle(homeTeam + " " + awayTeam, msScore, iyScore, fragment);
+                i += 2; // 3 satırı işledik, atla
                 continue;
             }
         }
 
-        // STANDART AYIKLAMA (Tek satır veya diğer kombinasyonlar)
-        let scores = line1.match(scoreRegex) || [];
-        let matchName = line1
-            .replace(scoreRegex, '')
-            .replace(/\d{2}:\d{2}/g, '')
-            .replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '')
-            .replace(/[☆✩✰*]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
+        // STANDART TEK VEYA ÇİFT SATIRLI ESKİ MANTIK (Yedek olarak duruyor)
+        let matchName = line1.replace(scoreRegex, '').replace(/\d{2}:\d{2}/g, '').replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '').replace(/[☆✩✰*]/g, '').replace(/\s+/g, ' ').trim();
+        let scores = line1Scores || [];
 
         if (scores.length === 0 && matchName.length > 3 && i + 1 < lines.length) {
-            let nextLineClean = lines[i+1].replace(/(^-)|(-$)/g, '').trim();
-            let nextScores = nextLineClean.match(scoreRegex);
+            let nextScores = lines[i+1].match(scoreRegex);
             if (nextScores) scores = nextScores;
         }
 
         if (scores.length > 0 && matchName.length > 3) {
             let ms = scores[0];
             let iy = scores.length > 1 ? scores[1] : "-";
-            
             if (iy === "-" && i + 1 < lines.length) {
-                let nextOnlyScore = lines[i+1].trim().replace(/(^-)|(-$)/g, '').trim();
-                if (nextOnlyScore.match(/^(\d+-\d+)$/)) iy = nextOnlyScore;
+                let nextVal = lines[i+1].trim();
+                if (nextVal.match(/^(\d+-\d+)$/)) iy = nextVal;
             }
             ekle(matchName, ms, iy, fragment);
         }
@@ -130,7 +125,7 @@ function tabloyuKopyala() {
     });
 
     if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste MS ve İY ibareleriyle kopyalandı!"));
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste MS ve İY formatında kopyalandı!"));
     } else {
         alert("Kopyalanacak veri yok.");
     }
