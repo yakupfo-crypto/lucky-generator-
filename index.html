@@ -58,28 +58,28 @@ function islemYap() {
         let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
         let currentScores = currentLine.match(scoreRegex);
 
-        // GÜNCEL 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: Deplasman, 3: İY)
+        // 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: İY, 3: Deplasman)
         if (currentScores && i + 2 < lines.length) {
-            let secondLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+            let nextLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             
-            let secondLineScores = secondLine.match(scoreRegex);
+            let nextLineScores = nextLine.match(scoreRegex);
             let thirdLineScores = thirdLine.match(scoreRegex);
 
-            // Eğer 1. satırda skor varsa, 2. satırda skor yoksa (deplasman takımı) ve 3. satır sadece skorsa (İY)
-            if (currentScores.length === 1 && !secondLineScores && thirdLineScores) {
+            // Eğer 1. satırda skor varsa, 2. satır sadece skorsa ve 3. satırda skor yoksa (takım ismiyse)
+            if (currentScores.length === 1 && nextLineScores && !thirdLineScores) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let awayTeam = secondLine.trim();
+                let awayTeam = thirdLine.trim();
                 let msScore = currentScores[0];
-                let iyScore = thirdLineScores[0];
+                let iyScore = nextLineScores[0];
 
                 ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
-                i += 2; 
+                i += 2; // 3 satırı birden tükettik
                 continue;
             }
         }
 
-        // STANDART İŞLEME MANTIĞI
+        // STANDART TEK VEYA ÇİFT SATIRLI İŞLEME (Eski mantık korundu)
         let matchName = currentLine.replace(scoreRegex, '').replace(/\d{2}:\d{2}/g, '').replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '').replace(/[☆✩✰*]/g, '').replace(/\s+/g, ' ').trim();
         let scores = currentScores || [];
 
