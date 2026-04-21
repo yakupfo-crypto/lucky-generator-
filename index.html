@@ -55,46 +55,36 @@ function islemYap() {
     tbody.innerHTML = '';
 
     for (let i = 0; i < lines.length; i++) {
-        let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
-        let currentScores = currentLine.match(scoreRegex);
+        let line1 = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+        let scores1 = line1.match(scoreRegex);
 
-        // 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: Deplasman, 3: İY)
-        if (currentScores && i + 2 < lines.length) {
-            let nextLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
-            let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+        // ÖZEL 3 SATIRLI KONTROL (1: Ev+MS, 2: Deplasman, 3: İY)
+        if (scores1 && i + 2 < lines.length) {
+            let line2 = lines[i+1].trim(); // Deplasman takımı
+            let line3 = lines[i+2].trim(); // İY skoru
             
-            let nextLineScores = nextLine.match(scoreRegex);
-            let thirdLineScores = thirdLine.match(scoreRegex);
+            let scores2 = line2.match(scoreRegex);
+            let scores3 = line3.match(scoreRegex);
 
-            // Yeni yapı: 1. satırda MS var, 2. satırda skor yok (deplasman), 3. satırda İY var
-            if (currentScores.length === 1 && !nextLineScores && thirdLineScores) {
-                let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let msScore = currentScores[0];
-                let iyScore = thirdLineScores[0];
+            // Eğer 1. satırda skor varsa, 2. satırda skor yoksa (takım ismiyse) ve 3. satır sadece skorsa
+            if (scores1.length === 1 && !scores2 && scores3) {
+                let homeTeamOnly = line1.replace(scoreRegex, '').trim();
+                let msScore = scores1[0];
+                let iyScore = scores3[0];
 
-                ekle(homeTeam, msScore, iyScore, fragment);
-                i += 2; // 3 satırı birden tükettik
+                ekle(homeTeamOnly, msScore, iyScore, fragment);
+                i += 2; 
                 continue;
             }
         }
 
-        // STANDART İŞLEME (Değişmedi)
-        let matchName = currentLine.replace(scoreRegex, '').replace(/\d{2}:\d{2}/g, '').replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '').replace(/[☆✩✰*]/g, '').replace(/\s+/g, ' ').trim();
-        let scores = currentScores || [];
+        // STANDART İŞLEME (Eğer 3 satırlı yapıya uymazsa)
+        let matchName = line1.replace(scoreRegex, '').replace(/\d{2}:\d{2}/g, '').replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '').replace(/[☆✩✰*]/g, '').replace(/\s+/g, ' ').trim();
+        let scores = scores1 || [];
 
-        if (scores.length === 0 && matchName.length > 3 && i + 1 < lines.length) {
-            let cleanNext = lines[i+1].replace(/(^-)|(-$)/g, '').trim();
-            let nextScores = cleanNext.match(scoreRegex);
-            if (nextScores) scores = nextScores;
-        }
-
-        if (scores.length > 0 && matchName.length > 3) {
+        if (scores.length > 0 && matchName.length > 1) {
             let ms = scores[0];
             let iy = scores.length > 1 ? scores[1] : "-";
-            if (iy === "-" && i + 1 < lines.length) {
-                let nextOnlyScore = lines[i+1].trim().replace(/(^-)|(-$)/g, '').trim();
-                if (nextOnlyScore.match(/^(\d+-\d+)$/)) iy = nextOnlyScore;
-            }
             ekle(matchName, ms, iy, fragment);
         }
     }
@@ -122,7 +112,7 @@ function tabloyuKopyala() {
     });
 
     if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste MS ve İY ibareleriyle kopyalandı!"));
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste kopyalandı!"));
     } else {
         alert("Kopyalanacak veri yok.");
     }
