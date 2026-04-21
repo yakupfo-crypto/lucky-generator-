@@ -58,7 +58,7 @@ function islemYap() {
         let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
         let currentScores = currentLine.match(scoreRegex);
 
-        // YENİ 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: Deplasman, 3: İY Skoru)
+        // GÜNCEL 3 SATIRLI BLOK KONTROLÜ (1: Ev+MS, 2: Deplasman, 3: İY)
         if (currentScores && i + 2 < lines.length) {
             let secondLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
@@ -66,7 +66,7 @@ function islemYap() {
             let secondLineScores = secondLine.match(scoreRegex);
             let thirdLineScores = thirdLine.match(scoreRegex);
 
-            // Eğer 1. satırda skor varsa (MS), 2. satırda skor yoksa (Deplasman İsmi) ve 3. satırda skor varsa (İY)
+            // Eğer 1. satırda skor varsa, 2. satırda skor yoksa (deplasman takımı) ve 3. satır sadece skorsa (İY)
             if (currentScores.length === 1 && !secondLineScores && thirdLineScores) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
                 let awayTeam = secondLine.trim();
@@ -79,7 +79,7 @@ function islemYap() {
             }
         }
 
-        // STANDART İŞLEME (Diğer durumlar için)
+        // STANDART İŞLEME MANTIĞI
         let matchName = currentLine.replace(scoreRegex, '').replace(/\d{2}:\d{2}/g, '').replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '').replace(/[☆✩✰*]/g, '').replace(/\s+/g, ' ').trim();
         let scores = currentScores || [];
 
@@ -92,6 +92,10 @@ function islemYap() {
         if (scores.length > 0 && matchName.length > 3) {
             let ms = scores[0];
             let iy = scores.length > 1 ? scores[1] : "-";
+            if (iy === "-" && i + 1 < lines.length) {
+                let nextOnlyScore = lines[i+1].trim().replace(/(^-)|(-$)/g, '').trim();
+                if (nextOnlyScore.match(/^(\d+-\d+)$/)) iy = nextOnlyScore;
+            }
             ekle(matchName, ms, iy, fragment);
         }
     }
