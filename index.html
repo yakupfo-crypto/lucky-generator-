@@ -58,33 +58,31 @@ function islemYap() {
         let currentLine = lines[i].replace(/(^-\s+)|(\s+-$)/g, '').trim();
         let currentScores = currentLine.match(scoreRegex);
 
-        // 3 SATIRLI BLOK KONTROLLERİ
+        // 3 SATIRLI ÖZEL YAPILARIN KONTROLÜ
         if (i + 2 < lines.length) {
-            let nextLine = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
-            let thirdLine = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+            let line2 = lines[i+1].replace(/(^-\s+)|(\s+-$)/g, '').trim();
+            let line3 = lines[i+2].replace(/(^-\s+)|(\s+-$)/g, '').trim();
             
-            let nextScores = nextLine.match(scoreRegex);
-            let thirdScores = thirdLine.match(scoreRegex);
+            let scores2 = line2.match(scoreRegex);
+            let scores3 = line3.match(scoreRegex);
 
-            // DURUM A: 1.Ev+MS, 2.Deplasman, 3.İY (Yeni İstek)
-            if (currentScores && !nextScores && thirdScores) {
+            // DURUM A: 1. Satır: Ev+MS, 2. Satır: Deplasman, 3. Satır: İY (Yeni Görüntü)
+            if (currentScores && !scores2 && scores3) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let awayTeam = nextLine.trim();
+                let awayTeam = line2;
                 let msScore = currentScores[0];
-                let iyScore = thirdScores[0];
-
+                let iyScore = scores3[0];
                 ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
-                i += 2; 
+                i += 2;
                 continue;
             }
 
-            // DURUM B: 1.Ev+MS, 2.İY, 3.Deplasman (Önceki İstek)
-            if (currentScores && nextScores && !thirdScores) {
+            // DURUM B: 1. Satır: Ev+MS, 2. Satır: İY, 3. Satır: Deplasman (Önceki Görüntü)
+            if (currentScores && scores2 && !scores3) {
                 let homeTeam = currentLine.replace(scoreRegex, '').trim();
-                let awayTeam = thirdLine.trim();
+                let awayTeam = line3;
                 let msScore = currentScores[0];
-                let iyScore = nextScores[0];
-
+                let iyScore = scores2[0];
                 ekle(homeTeam + " - " + awayTeam, msScore, iyScore, fragment);
                 i += 2;
                 continue;
@@ -96,8 +94,7 @@ function islemYap() {
         let scores = currentScores || [];
 
         if (scores.length === 0 && matchName.length > 3 && i + 1 < lines.length) {
-            let cleanNext = lines[i+1].replace(/(^-)|(-$)/g, '').trim();
-            let nextScores = cleanNext.match(scoreRegex);
+            let nextScores = lines[i+1].match(scoreRegex);
             if (nextScores) scores = nextScores;
         }
 
