@@ -7,7 +7,7 @@
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 10px; }
         .container { max-width: 900px; margin: auto; }
-        textarea { width: 100%; height: 150px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; outline: none; }
+        textarea { width: 100%; height: 200px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; outline: none; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
         button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; transition: 0.2s; }
         .btn-islem { background: #00c853; color: black; }
@@ -19,13 +19,13 @@
         .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #ffeb3b; font-weight: bold; }
         
         .col-mac { width: auto; }
-        .col-skor { width: 1px; white-space: nowrap; text-align: center; padding-left: 2px; padding-right: 2px; } 
+        .col-skor { width: 1px; white-space: nowrap; text-align: center; padding-left: 15px; padding-right: 15px; } 
     </style>
 </head>
 <body>
 
 <div class="container">
-    <textarea id="rawInput" placeholder="Karışık metni buraya yapıştırın..."></textarea>
+    <textarea id="rawInput" placeholder="Önce takım listesini, altına da skor listesini yapıştırabilirsiniz..."></textarea>
     
     <div class="btn-group">
         <button class="btn-islem" onclick="islemYap()">LİSTEYİ DÜZELT VE SIRALA</button>
@@ -47,41 +47,34 @@
 <script>
 function islemYap() {
     const input = document.getElementById('rawInput').value;
-    // Satırları ayır, temizle ve boş olmayanları al
     const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const tbody = document.getElementById('sonucAlani');
-    const fragment = document.createDocumentFragment();
-    const scoreRegex = /(\d+-\d+|E-E)/g;
+    const scoreRegex = /\d+-\d+/g; // Sadece skorları bulur (1-2 gibi)
     
+    // Tüm metindeki skorları sırayla bir diziye topla
+    let allScores = input.match(scoreRegex) || [];
+    
+    // Skor olmayan satırları (Takım isimlerini) ayıkla
+    let teamNames = lines.filter(line => !line.match(scoreRegex) && line.length > 2);
+
     tbody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
 
-    lines.forEach(line => {
-        // Skoru bul
-        let scores = line.match(scoreRegex) || [];
-        
-        // Temiz maç ismini oluştur
-        let matchName = line
-            .replace(scoreRegex, '')
-            .replace(/\d{2}:\d{2}/g, '')
-            .replace(/\b(MS|İY|IY|İyi|Iyi|Sonuçlandı|Bitti)\b/gi, '')
-            .replace(/[☆✩✰*]/g, '')
-            .replace(/\s\s+/g, ' ')
-            .trim();
+    // Takım isimleri üzerinden döngü kur
+    teamNames.forEach((team, index) => {
+        // Her takım için 2 skor çek: index*2 MS'yi, (index*2)+1 İY'yi temsil eder
+        let ms = allScores[index * 2] || "-";
+        let iy = allScores[(index * 2) + 1] || "-";
 
-        if (matchName.length > 0) {
-            let msScore = scores.length > 0 ? scores[0] : "-"; 
-            let iyScore = scores.length > 1 ? scores[1] : "-";
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${matchName}</td>
-                <td class="col-skor"><span class="skor-kutusu">${msScore}</span></td>
-                <td class="col-skor" style="color:#888;">${iyScore}</td>
-            `;
-            fragment.appendChild(tr);
-        }
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${team}</td>
+            <td class="col-skor"><span class="skor-kutusu">${ms}</span></td>
+            <td class="col-skor" style="color:#888;">${iy}</td>
+        `;
+        fragment.appendChild(tr);
     });
-    
+
     tbody.appendChild(fragment);
 }
 
@@ -96,9 +89,9 @@ function tabloyuKopyala() {
     });
 
     if (text) {
-        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste eksiksiz kopyalandı!"));
+        navigator.clipboard.writeText(text.trim()).then(() => alert("Liste başarıyla kopyalandı!"));
     } else {
-        alert("Kopyalanacak veri yok.");
+        alert("Kopyalanacak veri bulunamadı.");
     }
 }
 </script>
