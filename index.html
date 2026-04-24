@@ -2,87 +2,77 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Hızlı Skor Eşleştirici v2</title>
+    <title>Sıfır Hata Skor Eşleştirici</title>
     <style>
-        body { background: #0f0f0f; color: #ddd; font-family: sans-serif; padding: 20px; }
-        .input-area { width: 100%; height: 120px; background: #1a1a1a; color: #00ff00; border: 1px solid #333; border-radius: 5px; padding: 10px; margin-bottom: 10px; }
-        .btn-process { background: #e91e63; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #151515; }
-        th { background: #222; color: #888; padding: 10px; text-align: left; font-size: 12px; }
-        td { border-bottom: 1px solid #222; padding: 10px; font-size: 14px; }
-        .no-col { color: #555; width: 30px; }
-        .score-box { color: #fff; font-weight: bold; background: #333; padding: 2px 6px; border-radius: 3px; }
-        .iy-box { color: #aaa; font-size: 12px; }
+        body { font-family: sans-serif; background: #121212; color: #fff; padding: 20px; }
+        .box { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        textarea { width: 100%; height: 100px; background: #222; color: #00e676; border: 1px solid #444; }
+        button { background: #00c853; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+        th { background: #333; }
+        .score { color: #ffeb3b; font-weight: bold; }
+        .iy { color: #aaa; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
-    <textarea id="rawInput" class="input-area" placeholder="Maç listesini ve sonuçları buraya topluca yapıştırın..."></textarea>
-    <button class="btn-process" onclick="syncScores()">SKORLARI EŞLEŞTİR VE LİSTELE</button>
+<div class="box">
+    <h3>Sıralı Maç İsimleri</h3>
+    <textarea id="targetMatches" placeholder="Eşleştirilecek ana listeyi buraya yapıştırın..."></textarea>
+</div>
 
-    <table>
-        <thead>
-            <tr>
-                <th class="no-col">#</th>
-                <th>MAÇ</th>
-                <th style="text-align:center">MS</th>
-                <th style="text-align:center">İY</th>
-            </tr>
-        </thead>
-        <tbody id="resultTable"></tbody>
-    </table>
+<div class="box">
+    <h3>Güncel Skor Verileri</h3>
+    <textarea id="sourceScores" placeholder="En alttan gelen güncel skorları buraya yapıştırın..."></textarea>
+</div>
+
+<button onclick="syncScores()">VERİLERİ EŞLEŞTİR VE SIRALA</button>
+
+<table id="resultTable">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Maç</th>
+            <th>MS</th>
+            <th>İY</th>
+        </tr>
+    </thead>
+    <tbody id="resultBody"></tbody>
+</table>
 
 <script>
 function syncScores() {
-    const text = document.getElementById('rawInput').value;
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const table = document.getElementById('resultTable');
-    table.innerHTML = '';
+    const targetLines = document.getElementById('targetMatches').value.split('\n').filter(l => l.includes('-'));
+    const sourceText = document.getElementById('sourceScores').value;
+    const resultBody = document.getElementById('resultBody');
+    resultBody.innerHTML = '';
 
-    let matchMap = new Map();
-    let matchSequence = [];
-
-    // Algoritma: Önce takımları bul, sonra skorları eşleştir
-    for (let i = 0; i < lines.length; i++) {
-        if (lines[i].includes('-')) {
-            let teams = lines[i].split('-').map(t => t.trim());
-            if (teams.length === 2 && isNaN(teams[0])) {
-                let matchKey = teams[0] + " - " + teams[1];
-                if (!matchMap.has(matchKey)) {
-                    matchMap.set(matchKey, { ms: "-", iy: "-" });
-                    matchSequence.push(matchKey);
-                }
-            }
-        }
+    targetLines.forEach((line, index) => {
+        let teams = line.split('-').map(t => t.trim());
+        let home = teams[0].replace(/\d{2}:\d{2}/, '').trim();
+        let away = teams[1].trim();
         
-        // Skor satırı kontrolü (Örn: 2 - 1 veya İ.Y 0 - 0)
-        if (/\d+\s*-\s*\d+/.test(lines[i])) {
-            let score = lines[i].match(/\d+\s*-\s*\d+/)[0];
-            let potentialTeamLine = lines[i-1] || "";
-            let potentialTeamLine2 = lines[i-2] || "";
-            
-            matchSequence.forEach(m => {
-                if (potentialTeamLine.includes(m.split(' - ')[0]) || potentialTeamLine2.includes(m.split(' - ')[0])) {
-                    if (lines[i].includes('İ.Y')) {
-                        matchMap.get(m).iy = score;
-                    } else {
-                        matchMap.get(m).ms = score;
-                    }
-                }
-            });
+        // Kaynak metin içinde bu takımları ara ve skorunu çek
+        let ms = "-";
+        let iy = "-";
+        
+        // Basit regex ile MS ve İY yakalama (Geliştirilmiş mantık)
+        let pattern = new RegExp(home + "[\\s\\S]*?(\\d+ - \\d+|ERT|PENMS)[\\s\\S]*?İY (\\d+ - \\d+)", "i");
+        let match = sourceText.match(pattern);
+        
+        if(match) {
+            ms = match[1];
+            iy = match[2];
         }
-    }
 
-    // Tabloyu Oluştur (1'den başlayarak)
-    matchSequence.forEach((m, index) => {
-        let data = matchMap.get(m);
-        table.innerHTML += `
-            <tr>
-                <td class="no-col">${index + 1}</td>
-                <td>${m}</td>
-                <td style="text-align:center"><span class="score-box">${data.ms}</span></td>
-                <td style="text-align:center" class="iy-box">${data.iy}</td>
-            </tr>`;
+        let row = `<tr>
+            <td>${index + 1}</td>
+            <td>${home} - ${away}</td>
+            <td class="score">${ms}</td>
+            <td class="iy">${iy}</td>
+        </tr>`;
+        resultBody.innerHTML += row;
     });
 }
 </script>
