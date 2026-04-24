@@ -2,79 +2,118 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Sıfır Hata Skor Eşleştirici</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skor & Maç Eşleştirici PRO</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; padding: 20px; }
-        .box { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-        textarea { width: 100%; height: 100px; background: #222; color: #00e676; border: 1px solid #444; }
-        button { background: #00c853; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-        th { background: #333; }
-        .score { color: #ffeb3b; font-weight: bold; }
-        .iy { color: #aaa; font-size: 0.9em; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #e0e0e0; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; display: flex; flex-direction: column; gap: 15px; }
+        .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        textarea { width: 100%; height: 250px; background: #1a1a1a; color: #00ff41; border: 1px solid #333; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 13px; resize: none; }
+        .controls { text-align: center; }
+        button { padding: 15px 40px; background: #2962ff; color: white; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #0039cb; transform: scale(1.02); }
+        table { width: 100%; border-collapse: collapse; background: #1a1a1a; border-radius: 12px; overflow: hidden; margin-top: 20px; }
+        th { background: #333; color: #757575; padding: 12px; font-size: 12px; text-transform: uppercase; }
+        td { padding: 15px 12px; border-bottom: 1px solid #262626; font-size: 14px; }
+        .no-cell { color: #2962ff; font-weight: bold; width: 40px; text-align: center; }
+        .match-cell { color: #fff; font-weight: 500; }
+        .score-box { background: #333; color: #ffea00; padding: 5px 10px; border-radius: 4px; font-weight: bold; min-width: 45px; display: inline-block; text-align: center; }
+        .iy-cell { color: #888; font-size: 13px; text-align: center; }
+        .lig-row { background: #b71c1c; color: white; font-weight: bold; font-size: 12px; text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <h3>Sıralı Maç İsimleri</h3>
-    <textarea id="targetMatches" placeholder="Eşleştirilecek ana listeyi buraya yapıştırın..."></textarea>
+<div class="container">
+    <div class="panels">
+        <textarea id="listInput" placeholder="1: Maç listesini buraya yapıştırın (Üstteki liste)..."></textarea>
+        <textarea id="scoreInput" placeholder="2: Skor verilerini buraya yapıştırın (Alttaki liste)..."></textarea>
+    </div>
+
+    <div class="controls">
+        <button onclick="eslestirVeSirala()">EŞLEŞTİR VE NUMARALANDIR</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>NO</th>
+                <th>MAÇ</th>
+                <th style="text-align:center">MS</th>
+                <th style="text-align:center">İY</th>
+            </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+    </table>
 </div>
-
-<div class="box">
-    <h3>Güncel Skor Verileri</h3>
-    <textarea id="sourceScores" placeholder="En alttan gelen güncel skorları buraya yapıştırın..."></textarea>
-</div>
-
-<button onclick="syncScores()">VERİLERİ EŞLEŞTİR VE SIRALA</button>
-
-<table id="resultTable">
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>Maç</th>
-            <th>MS</th>
-            <th>İY</th>
-        </tr>
-    </thead>
-    <tbody id="resultBody"></tbody>
-</table>
 
 <script>
-function syncScores() {
-    const targetLines = document.getElementById('targetMatches').value.split('\n').filter(l => l.includes('-'));
-    const sourceText = document.getElementById('sourceScores').value;
-    const resultBody = document.getElementById('resultBody');
-    resultBody.innerHTML = '';
+function eslestirVeSirala() {
+    const listRaw = document.getElementById('listInput').value;
+    const scoreRaw = document.getElementById('scoreInput').value;
+    const tbody = document.getElementById('resultBody');
+    tbody.innerHTML = '';
 
-    targetLines.forEach((line, index) => {
-        let teams = line.split('-').map(t => t.trim());
-        let home = teams[0].replace(/\d{2}:\d{2}/, '').trim();
-        let away = teams[1].trim();
-        
-        // Kaynak metin içinde bu takımları ara ve skorunu çek
-        let ms = "-";
-        let iy = "-";
-        
-        // Basit regex ile MS ve İY yakalama (Geliştirilmiş mantık)
-        let pattern = new RegExp(home + "[\\s\\S]*?(\\d+ - \\d+|ERT|PENMS)[\\s\\S]*?İY (\\d+ - \\d+)", "i");
-        let match = sourceText.match(pattern);
-        
-        if(match) {
-            ms = match[1];
-            iy = match[2];
+    // 1. Skor Verilerini Haritalama (Hata payını azaltmak için normalize edilir)
+    const scoreMap = {};
+    const scoreLines = scoreRaw.split('\n').map(s => s.trim());
+    
+    for (let i = 0; i < scoreLines.length; i++) {
+        if (scoreLines[i].includes('-')) {
+            let teamA = scoreLines[i-1] || "";
+            let scoreLine = scoreLines[i];
+            let teamB = scoreLines[i+1] || "";
+            let iyLine = scoreLines[i+2] || "";
+
+            if (teamA && teamB && scoreLine.match(/\d+\s-\s\d+/)) {
+                let key = (teamA + teamB).replace(/\s+/g, '').toLowerCase();
+                let iy = iyLine.includes('İ.Y') ? iyLine.replace('İ.Y', '').trim() : "-";
+                scoreMap[key] = { ms: scoreLine.trim(), iy: iy };
+            }
         }
+    }
+
+    // 2. Maç Listesini Temizleme ve Analiz
+    const listLines = listRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    let matches = [];
+    let currentLig = "";
+
+    for (let i = 0; i < listLines.length; i++) {
+        let line = listLines[i];
+        if (line.includes(':')) continue; // Saatleri geç
+        if (line.includes('-') && listLines[i-1] && listLines[i+1]) {
+            matches.push({
+                lig: currentLig,
+                home: listLines[i-1],
+                away: listLines[i+1]
+            });
+        } else if (line.length > 5 && isNaN(line[0]) && !line.includes('-')) {
+            currentLig = line;
+        }
+    }
+
+    // 3. Eşleştirme ve Numaralandırma (Aşağıdan yukarıya doğru 1'den başlar)
+    const totalMatches = matches.length;
+    
+    matches.forEach((m, index) => {
+        let key = (m.home + m.away).replace(/\s+/g, '').toLowerCase();
+        let found = scoreMap[key] || { ms: "-", iy: "-" };
+        
+        // Mantık: En alttaki maç 1 numara olacak şekilde sıralama
+        let rowNo = totalMatches - index;
 
         let row = `<tr>
-            <td>${index + 1}</td>
-            <td>${home} - ${away}</td>
-            <td class="score">${ms}</td>
-            <td class="iy">${iy}</td>
+            <td class="no-cell">${rowNo}</td>
+            <td class="match-cell">${m.home} - ${m.away}</td>
+            <td style="text-align:center"><span class="score-box">${found.ms}</span></td>
+            <td class="iy-cell">${found.iy}</td>
         </tr>`;
-        resultBody.innerHTML += row;
+        
+        // Başa ekleyerek (prepend) nihai listede numaraların 1-2-3... gitmesini sağlarız
+        tbody.insertAdjacentHTML('afterbegin', row);
     });
 }
 </script>
+
 </body>
 </html>
