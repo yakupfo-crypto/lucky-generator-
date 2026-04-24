@@ -2,132 +2,93 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skor Numaralandırıcı ve Eşleştirici PRO</title>
+    <title>Süper Skor Eşleştirici v3</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #cfcfcf; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; }
-        .box { background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
-        textarea { width: 100%; height: 250px; background: #252525; color: #00ff41; border: 1px solid #444; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 13px; outline: none; }
-        .controls { display: flex; gap: 10px; margin: 15px 0; }
-        button { flex: 1; padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 14px; }
-        .btn-run { background: #2e7d32; color: white; }
-        .btn-run:hover { background: #388e3c; }
-        .btn-copy { background: #1565c0; color: white; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #1a1a1a; }
-        th { background: #333; color: #888; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; }
-        td { padding: 10px; border-bottom: 1px solid #262626; font-size: 14px; }
-        .no-cell { color: #ffeb3b; font-weight: bold; width: 40px; }
-        .team-cell { color: #fff; }
-        .score-ms { color: #00e676; font-weight: bold; background: #004d40; padding: 2px 6px; border-radius: 4px; }
-        .score-iy { color: #90a4ae; font-size: 12px; margin-left: 8px; }
-        .lig-row { background: #b71c1c; color: white; font-weight: bold; text-align: center; font-size: 12px; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 20px; }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; background: #333; color: #fff; border: 1px solid #555; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { padding: 12px 20px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
+        .btn-run { background: #4CAF50; color: white; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #444; padding: 10px; text-align: left; }
+        th { background: #2c2c2c; }
+        .no-col { width: 50px; text-align: center; color: #aaa; }
+        .score-col { font-weight: bold; color: #f1c40f; text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="box">
-        <h3 style="margin-top:0; color:#fff;">Veri Girişi</h3>
-        <textarea id="rawInput" placeholder="En üstteki fikstür listesini ve en alttaki skorlu listeyi buraya ardarda yapıştırın..."></textarea>
-        <div class="controls">
-            <button class="btn-run" onclick="baslat()">1- NUMARALANDIR VE SKORLARI EŞLEŞTİR</button>
-            <button class="btn-copy" onclick="kopyala()">TABLOYU KOPYALA</button>
-        </div>
+    <h3>1. Maç Listesi (İsimler)</h3>
+    <textarea id="listInput" placeholder="Sadece maç isimlerinin olduğu listeyi buraya yapıştırın..."></textarea>
+
+    <h3>2. Güncel Skor Verisi</h3>
+    <textarea id="scoreInput" placeholder="Skorlu karışık veriyi buraya yapıştırın..."></textarea>
+
+    <div class="controls">
+        <button class="btn-run" onclick="processMatches()">NUMARALANDIR VE EŞLEŞTİR</button>
     </div>
 
     <table id="resultTable">
         <thead>
             <tr>
-                <th>NO</th>
-                <th>MAÇ BİLGİSİ</th>
-                <th>MS / İY</th>
+                <th class="no-col">No</th>
+                <th>Maç Karşılaşması</th>
+                <th class="score-col">MS</th>
+                <th class="score-col">İY</th>
             </tr>
         </thead>
-        <tbody id="outputBody"></tbody>
+        <tbody id="resultBody"></tbody>
     </table>
-</div>
 
-<script>
-function baslat() {
-    const text = document.getElementById('rawInput').value;
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    
-    let scoresMap = new Map(); // Skorları saklayacağımız hafıza
-    let fixtures = []; // İlk baştaki numarasız maçlar
-    
-    // 1. ADIM: ÖNCE SKORLU VERİLERİ (ALT KISIM) TARAYIP HAFIZAYA AL
-    for (let i = 0; i < lines.length; i++) {
-        // Eğer satırda "Takım A 2 - 1 Takım B" formatı varsa
-        if (lines[i].includes(' - ') && /\d+\s*-\s*\d+/.test(lines[i])) {
-            let parts = lines[i].split(/\d+\s*-\s*\d+/);
-            if (parts.length >= 2) {
-                let home = parts[0].trim();
-                let away = parts[1].split('İ.Y')[0].trim();
-                let matchName = `${home} - ${away}`;
+    <script>
+    function processMatches() {
+        const listText = document.getElementById('listInput').value;
+        const scoreText = document.getElementById('scoreInput').value;
+        const tbody = document.getElementById('resultBody');
+        tbody.innerHTML = '';
+
+        // 1. Maç İsimlerini Temizleme
+        const nameLines = listText.split('\n')
+            .map(l => l.trim())
+            .filter(l => l.includes('-') && !/\d+/.test(l));
+
+        // 2. Skor Verisini Haritalama (Map)
+        const scoreMap = new Map();
+        const scoreBlocks = scoreText.split(/Bitti|PENMS|UZMS|ERT|\d+'/i);
+
+        scoreBlocks.forEach(block => {
+            const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length >= 2) {
+                const teams = lines[0] + " - " + lines[lines.length-1]; // Örn: Takım A - Takım B
+                const scoreMatch = block.match(/(\d+\s*-\s*\d+)/);
+                const iyMatch = block.match(/İ\.Y\s*(\d+\s*-\s*\d+)/);
                 
-                let msMatch = lines[i].match(/(\d+\s*-\s*\d+)/);
-                let ms = msMatch ? msMatch[0] : "0 - 0";
-                
-                // İY skorunu sonraki satırda veya aynı satırda ara
-                let iy = "0 - 0";
-                let fullLine = lines[i] + (lines[i+1] || "");
-                let iyMatch = fullLine.match(/İ\.Y\s*(\d+\s*-\s*\d+)/);
-                if (iyMatch) iy = iyMatch[1];
-                
-                scoresMap.set(matchName, { ms, iy });
+                if (scoreMatch) {
+                    const cleanKey = lines[0].toLowerCase().replace(/\s/g, '');
+                    scoreMap.set(cleanKey, {
+                        ms: scoreMatch[1],
+                        iy: iyMatch ? iyMatch[1] : '0 - 0'
+                    });
+                }
             }
-        }
+        });
+
+        // 3. Eşleştirme ve Ters Numaralandırma
+        let total = nameLines.length;
+        nameLines.forEach((matchName, index) => {
+            const homeTeam = matchName.split('-')[0].trim();
+            const cleanKey = homeTeam.toLowerCase().replace(/\s/g, '');
+            const scoreData = scoreMap.get(cleanKey) || { ms: '- - -', iy: '- - -' };
+
+            const row = `<tr>
+                <td class="no-col">${total - index}</td>
+                <td>${matchName}</td>
+                <td class="score-col">${scoreData.ms}</td>
+                <td class="score-col">${scoreData.iy}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
     }
-
-    // 2. ADIM: ÜSTTEKİ FİKSTÜR LİSTESİNİ AYIKLA
-    let tempFixtures = [];
-    for (let i = 0; i < lines.length; i++) {
-        if (lines[i].includes(' - ') && !/\d/.test(lines[i])) { // Sadece isim içeren satırlar
-            tempFixtures.push(lines[i]);
-        }
-    }
-
-    // 3. ADIM: ALTTAN ÜSTE NUMARALANDIR VE TABLOYU OLUŞTUR
-    const tbody = document.getElementById('outputBody');
-    tbody.innerHTML = '';
-    
-    // Sondan başa doğru numaralandırma (1, 2, 3...)
-    let counter = 1;
-    for (let i = tempFixtures.length - 1; i >= 0; i--) {
-        let matchName = tempFixtures[i];
-        let scoreData = scoresMap.get(matchName) || { ms: "- / -", iy: "- / -" };
-
-        let row = `<tr>
-            <td class="no-cell">${counter}</td>
-            <td class="team-cell">${matchName}</td>
-            <td>
-                <span class="score-ms">${scoreData.ms}</span>
-                <span class="score-iy">(İY: ${scoreData.iy})</span>
-            </td>
-        </tr>`;
-        
-        // Yeni satırı üste ekle (Böylece 1 numara en üstte kalır ama listenin en altındaki maç olur)
-        tbody.insertAdjacentHTML('afterbegin', row);
-        counter++;
-    }
-}
-
-function kopyala() {
-    let content = "";
-    const rows = document.querySelectorAll("#outputBody tr");
-    rows.forEach(row => {
-        const no = row.cells[0].innerText;
-        const mac = row.cells[1].innerText;
-        const skor = row.cells[2].innerText;
-        content += `${no}\t${mac}\t${skor}\n`;
-    });
-    
-    navigator.clipboard.writeText(content).then(() => {
-        alert("Sıralı liste kopyalandı!");
-    });
-}
-</script>
-
+    </script>
 </body>
 </html>
