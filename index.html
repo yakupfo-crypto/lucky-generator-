@@ -3,44 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skor Düzenleyici PRO v2</title>
+    <title>Skor Eşleştirici PRO v2</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 10px; }
         .container { max-width: 1000px; margin: auto; }
-        textarea { width: 100%; height: 200px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 14px; margin-bottom: 10px; resize: vertical; }
-        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        button { flex: 1; min-width: 150px; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; border: none; transition: 0.3s; }
+        .input-wrapper { display: flex; gap: 10px; margin-bottom: 10px; }
+        textarea { flex: 1; height: 180px; background: #1e1e1e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 10px; font-size: 13px; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { flex: 1; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; border: none; transition: 0.3s; }
         .btn-islem { background: #00c853; color: black; }
-        .btn-islem:hover { background: #00a042; }
+        .btn-islem:hover { background: #00e676; }
         .btn-kopyala { background: #03a9f4; color: white; }
-        table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
         th { background: #333; color: #aaa; padding: 10px; font-size: 12px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #2d2d2d; font-size: 13px; }
-        .lig-baslik { background: #b71c1c; color: white; font-weight: bold; text-align: center; }
-        .skor-kutusu { background: #333; padding: 3px 7px; border-radius: 4px; color: #ffeb3b; font-weight: bold; font-family: monospace; }
-        .no-tag { color: #888; font-weight: bold; margin-right: 5px; }
-        .status-tag { font-size: 11px; padding: 2px 5px; border-radius: 3px; font-weight: bold; text-transform: uppercase; border: 1px solid; }
-        .ms { color: #00e676; border-color: #00e676; }
-        .live { color: #ff5252; border-color: #ff5252; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
+        td { padding: 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
+        .no-col { color: #ffeb3b; font-weight: bold; width: 40px; text-align: center; }
+        .lig-baslik { background: #d32f2f; color: white; font-weight: bold; text-align: center; font-size: 13px; }
+        .skor-kutusu { background: #333; padding: 4px 8px; border-radius: 4px; color: #00e676; font-weight: bold; border: 1px solid #444; }
+        .iy-skor { color: #888; font-size: 12px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <textarea id="rawInput" placeholder="Tüm maç listesini ve skorları buraya topluca yapıştırın..."></textarea>
+    <div class="input-wrapper">
+        <textarea id="planlananInput" placeholder="1. Üstteki Planlanan Maç Listesini Buraya Yapıştırın..."></textarea>
+        <textarea id="skorlarInput" placeholder="2. Alttaki Skorlu Karışık Metni Buraya Yapıştırın..."></textarea>
+    </div>
     
     <div class="btn-group">
-        <button class="btn-islem" onclick="akilliIslem()">VERİLERİ EŞLEŞTİR VE SIRALA (ALTTAN ÜSTE)</button>
+        <button class="btn-islem" onclick="eslestirVeSirala()">EŞLEŞTİR, NUMARALANDIR VE SIRALA</button>
         <button class="btn-kopyala" onclick="tabloyuKopyala()">LİSTEYİ KOPYALA</button>
     </div>
 
-    <table id="skorTablosu">
+    <table id="sonucTablosu">
         <thead>
             <tr>
                 <th>NO</th>
-                <th>DURUM</th>
-                <th>MAÇ</th>
+                <th>MAÇ BİLGİSİ</th>
                 <th style="text-align:center">MS</th>
                 <th style="text-align:center">İY</th>
             </tr>
@@ -50,102 +50,105 @@
 </div>
 
 <script>
-function akilliIslem() {
-    const input = document.getElementById('rawInput').value;
-    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+function temizle(metin) {
+    return metin.toLowerCase()
+        .replace(/u21/g, '')
+        .replace(/fc/g, '')
+        .replace(/sc/g, '')
+        .replace(/cd/g, '')
+        .replace(/de caliente/g, '')
+        .replace(/\s+/g, '')
+        .trim();
+}
+
+function eslestirVeSirala() {
+    const planlananRaw = document.getElementById('planlananInput').value;
+    const skorlarRaw = document.getElementById('skorlarInput').value;
     const tbody = document.getElementById('sonucAlani');
     tbody.innerHTML = '';
 
-    let matchesFound = [];
-    let scoreDatabase = {}; // Takım isimlerine göre skorları saklayacak
-
-    // 1. ADIM: Skor Veritabanını Oluştur (Metnin içindeki skorlu satırları ayıkla)
-    for (let i = 0; i < lines.length; i++) {
-        if (lines[i].includes('-')) {
-            let scoreMatch = lines[i].match(/(\d+)\s*-\s*(\d+)/);
-            if (scoreMatch) {
-                let home = lines[i-1] ? lines[i-1].trim() : "";
-                let away = lines[i+1] ? lines[i+1].trim() : "";
-                let iyMatch = "";
+    // 1. Skor Verilerini Haritala (Key: Takımlar, Value: Skorlar)
+    const skorHaritasi = {};
+    const skorSatirlari = skorlarRaw.split('\n');
+    
+    for (let i = 0; i < skorSatirlari.length; i++) {
+        let satir = skorSatirlari[i].trim();
+        if (satir.includes(' - ') || (satir.includes('-') && /\d/.test(satir))) {
+            let ev, dep, ms = "-", iy = "-";
+            
+            // Takım isimlerini ve skorları ayıkla
+            if (satir.includes(' - ')) {
+                let parts = satir.split(' - ');
+                ev = parts[0].trim();
+                dep = parts[1].trim();
                 
-                // İY skorunu ara (yakındaki satırlarda)
-                for(let j=1; j<=3; j++) {
-                    if(lines[i+j] && lines[i+j].includes("İ.Y")) {
-                        iyMatch = lines[i+j].replace("İ.Y", "").trim();
-                        break;
+                // Bir sonraki satırlarda skor ara
+                for (let j = 1; j <= 3; j++) {
+                    if (skorSatirlari[i+j]) {
+                        let skorArama = skorSatirlari[i+j].trim();
+                        if (/\d+\s*-\s*\d+/.test(skorArama) && !skorArama.includes('İ.Y')) {
+                            ms = skorArama;
+                        }
+                        if (skorArama.includes('İ.Y')) {
+                            iy = skorArama.replace('İ.Y', '').trim();
+                        }
                     }
                 }
-
-                if (home && away) {
-                    let key = (home + away).toLowerCase().replace(/\s/g, '');
-                    scoreDatabase[key] = { ms: scoreMatch[0], iy: iyMatch || "0-0" };
-                }
+                const key = temizle(ev) + temizle(dep);
+                skorHaritasi[key] = { ms, iy };
             }
         }
     }
 
-    // 2. ADIM: Maç Listesini Belirle
-    let currentLig = "";
-    let matchEntries = [];
+    // 2. Planlanan Maçları Ayıkla ve Ters Çevir (Alttan Üste Numaralandırma için)
+    const planlananSatirlar = planlananRaw.split('\n').filter(l => l.trim().length > 0);
+    const macListesi = [];
+    let aktifLig = "Genel";
 
-    for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
+    for (let i = 0; i < planlananSatirlar.length; i++) {
+        let satir = planlananSatirlar[i].trim();
+        if (satir.includes(':') && planlananSatirlar[i+1] && planlananSatirlar[i+2] === "-") {
+            let saat = satir;
+            let ev = planlananSatirlar[i+1].trim();
+            let dep = planlananSatirlar[i+3].trim();
+            macListesi.push({ saat, ev, dep, lig: aktifLig });
+            i += 3;
+        } else if (isNaN(satir.charAt(0)) && !satir.includes(':') && satir.length > 5) {
+            aktifLig = satir;
+        }
+    }
+
+    // 3. Alttan 1 den başlayarak tabloya yaz
+    const toplamMac = macListesi.length;
+    for (let i = 0; i < toplamMac; i++) {
+        const m = macListesi[i];
+        const key = temizle(m.ev) + temizle(m.dep);
+        const sonuc = skorHaritasi[key] || { ms: "-", iy: "-" };
         
-        // Saat içeren satır maç başlangıcıdır
-        if (/^\d{2}:\d{2}$/.test(line)) {
-            let home = lines[i+1];
-            let away = lines[i+3];
-            if (home && away && away !== "-") {
-                matchEntries.push({
-                    lig: currentLig,
-                    time: line,
-                    home: home,
-                    away: away,
-                    key: (home + away).toLowerCase().replace(/\s/g, '')
-                });
-            }
-        } else if (line.length > 5 && !line.includes('-') && isNaN(line[0])) {
-            // Büyük ihtimalle Lig ismi
-            if(!line.includes(':')) currentLig = line;
-        }
-    }
+        // Numara: Toplamdan çıkararak (Alttan 1 başlar)
+        const no = toplamMac - i;
 
-    // 3. ADIM: Alttan Üste Numaralandır ve Yazdır
-    // Listeyi ters çeviriyoruz ki en alttaki 1 numara olsun
-    let reversedMatches = matchEntries.reverse();
-
-    reversedMatches.forEach((m, index) => {
-        let dbResult = scoreDatabase[m.key] || { ms: "-", iy: "-" };
-        let statusClass = dbResult.ms !== "-" ? "ms" : "live";
-        let statusText = dbResult.ms !== "-" ? "MS" : m.time;
-
-        let row = `
+        tbody.innerHTML += `
             <tr>
-                <td class="no-tag">${index + 1}</td>
-                <td><span class="status-tag ${statusClass}">${statusText}</span></td>
-                <td><b>${m.home}</b> - ${m.away} <br><small style="color:#666">${m.lig}</small></td>
-                <td style="text-align:center"><span class="skor-kutusu">${dbResult.ms}</span></td>
-                <td style="text-align:center; color:#888;">${dbResult.iy}</td>
+                <td class="no-col">${no}</td>
+                <td><small style="color:#666">${m.saat} | ${m.lig}</small><br><b>${m.ev} - ${m.dep}</b></td>
+                <td style="text-align:center"><span class="skor-kutusu">${sonuc.ms}</span></td>
+                <td style="text-align:center"><span class="iy-skor">${sonuc.iy}</span></td>
             </tr>
         `;
-        // UI'da tekrar üstten alta görünsün diye başa ekliyoruz
-        tbody.insertAdjacentHTML('afterbegin', row);
-    });
+    }
 }
 
 function tabloyuKopyala() {
-    const rows = document.querySelectorAll('#sonucAlani tr');
-    let text = "";
-    rows.forEach(row => {
-        if (row.cells.length > 1) {
-            let no = row.cells[0].innerText;
-            let mac = row.cells[2].innerText.split('\n')[0];
-            let ms = row.cells[3].innerText;
-            let iy = row.cells[4].innerText;
-            text += `${no}\t${mac}\t${ms}\t${iy}\n`;
+    let metin = "";
+    document.querySelectorAll("#sonucAlani tr").forEach(tr => {
+        const td = tr.querySelectorAll("td");
+        if(td.length > 1) {
+            metin += `${td[0].innerText}\t${td[1].innerText.replace('\n', ' ')}\t${td[2].innerText}\t${td[3].innerText}\n`;
         }
     });
-    navigator.clipboard.writeText(text).then(() => alert("Liste kopyalandı!"));
+    navigator.clipboard.writeText(metin);
+    alert("Liste başarıyla kopyalandı!");
 }
 </script>
 
