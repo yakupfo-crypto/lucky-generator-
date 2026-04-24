@@ -2,73 +2,149 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Skor Eşleştirici v3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canlı Skor Eşleştirici PRO</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: #fff; padding: 20px; }
-        textarea { width: 100%; height: 200px; background: #222; color: #00ff00; border: 1px solid #444; border-radius: 5px; padding: 10px; margin-bottom: 10px; }
-        button { background: #e91e63; color: white; border: none; padding: 15px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #252525; }
-        th, td { border: 1px solid #333; padding: 10px; text-align: left; }
-        th { background: #333; }
-        .score { color: #ffeb3b; font-weight: bold; text-align: center; }
-        .iy { color: #aaa; font-size: 13px; text-align: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #f0f0f0; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { text-align: center; color: #00e676; margin-top: 0; }
+        textarea { width: 100%; height: 200px; background: #252525; color: #fff; border: 2px solid #333; border-radius: 8px; padding: 12px; font-size: 14px; resize: vertical; outline: none; transition: border-color 0.3s; }
+        textarea:focus { border-color: #00e676; }
+        .controls { display: flex; gap: 15px; margin: 20px 0; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; transition: transform 0.1s, opacity 0.2s; }
+        button:active { transform: scale(0.98); }
+        .btn-process { background: #00e676; color: #000; }
+        .btn-copy { background: #2979ff; color: #fff; }
+        .table-wrapper { overflow-x: auto; margin-top: 10px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; background: #212121; }
+        th { background: #333; color: #00e676; padding: 12px; text-align: left; font-size: 13px; text-transform: uppercase; }
+        td { padding: 10px 12px; border-bottom: 1px solid #333; font-size: 14px; }
+        tr:hover { background: #2a2a2a; }
+        .no-cell { color: #888; font-weight: bold; width: 40px; }
+        .team-cell { font-weight: 500; }
+        .score-ms { color: #ffeb3b; font-weight: bold; text-align: center; width: 80px; }
+        .score-iy { color: #aaa; font-size: 12px; text-align: center; width: 80px; }
+        .status-tag { padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .finished { background: #1b5e20; color: #fff; }
+        .waiting { background: #455a64; color: #cfd8dc; }
     </style>
 </head>
 <body>
 
-    <h2>Hızlı Skor Eşleştirici</h2>
-    <textarea id="rawInput" placeholder="Buraya veriyi yapıştırın..."></textarea>
-    <button onclick="parseAndMatch()">EŞLEŞTİR VE SIRALA</button>
+<div class="container">
+    <h2>⚽ Skor Eşleştirme Sistemi</h2>
+    <textarea id="rawInput" placeholder="Maç listesini ve sonuçları buraya topluca yapıştırın..."></textarea>
+    
+    <div class="controls">
+        <button class="btn-process" onclick="processData()">VERİLERİ EŞLEŞTİR VE NUMARALANDIR</button>
+        <button class="btn-copy" onclick="copyResult()">TABLOYU KOPYALA</button>
+    </div>
 
-    <table id="resultTable">
-        <thead>
-            <tr>
-                <th>No</th>
-                <th>Maç İsmi</th>
-                <th>MS Score</th>
-                <th>İY Score</th>
-            </tr>
-        </thead>
-        <tbody id="output"></tbody>
-    </table>
+    <div class="table-wrapper">
+        <table id="resultTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>MAÇ KARŞILAŞMASI</th>
+                    <th style="text-align:center">MS</th>
+                    <th style="text-align:center">İY</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody">
+                </tbody>
+        </table>
+    </div>
+</div>
 
 <script>
-function parseAndMatch() {
+function processData() {
     const input = document.getElementById('rawInput').value;
-    const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const results = [];
-    
-    // Veriyi tarayarak maç isimlerini ve skorları yakala
+    const lines = input.split('\n').map(s => s.trim()).filter(s => s !== "");
+    const resultBody = document.getElementById('resultBody');
+    resultBody.innerHTML = "";
+
+    let matchDataMap = new Map();
+    let orderOfMatches = [];
+
+    // 1. AŞAMA: Tüm metni tarayıp skorları bir veritabanı (Map) gibi kaydedelim
+    // Alttaki örnek maçlardaki skorları yakalarız.
     for (let i = 0; i < lines.length; i++) {
-        if (lines[i].includes('-') && i > 0 && i < lines.length - 1) {
-            let home = lines[i-1];
-            let away = lines[i+1];
-            let score = lines[i];
-            
-            // Eğer bu bir maç bloğuysa (altında İ.Y varsa)
-            if (score.includes('-') && lines[i+2] && lines[i+2].includes('İ.Y')) {
-                results.push({
-                    match: home + " - " + away,
-                    ms: score,
-                    iy: lines[i+2].replace('İ.Y', '').trim()
-                });
+        let line = lines[i];
+        
+        // Takım1 - Takım2 formatını veya alt alta takım isimlerini bul
+        if (line.includes(" - ") || (i + 1 < lines.length && lines[i+1].includes(" - "))) {
+            let teamLine = line.includes(" - ") ? line : "";
+            let homeTeam = "", awayTeam = "";
+
+            if (teamLine) {
+                [homeTeam, awayTeam] = teamLine.split(" - ").map(t => t.trim());
+            }
+
+            // Skor araması (altındaki satırlarda 2 - 1 ve İ.Y 0 - 0 gibi)
+            let ms = "-", iy = "-";
+            for (let j = 1; j <= 5; j++) {
+                if (i + j >= lines.length) break;
+                let next = lines[i+j];
+                if (/\d+\s*-\s*\d+/.test(next) && !next.includes("İ.Y")) {
+                    ms = next.match(/\d+\s*-\s*\d+/)[0];
+                }
+                if (next.includes("İ.Y")) {
+                    iy = next.replace("İ.Y", "").trim();
+                }
+                // Yeni bir maça denk gelirsek aramayı kes
+                if (next.includes("-") && !/\d/.test(next)) break;
+            }
+
+            if (homeTeam && awayTeam) {
+                let key = (homeTeam + awayTeam).toLowerCase().replace(/\s/g, "");
+                matchDataMap.set(key, { ms, iy });
             }
         }
     }
 
-    // Alttan üste doğru numaralandırarak yazdır
-    const tbody = document.getElementById('output');
-    tbody.innerHTML = '';
-    results.reverse().forEach((res, index) => {
-        let row = `<tr>
-            <td>${index + 1}</td>
-            <td>${res.match}</td>
-            <td class="score">${res.ms}</td>
-            <td class="iy">${res.iy}</td>
-        </tr>`;
-        tbody.innerHTML += row;
+    // 2. AŞAMA: En baştaki orijinal listeyi (numarasız olanları) belirleyip eşleştirme yapalım
+    // Kullanıcın verdiği ilk listedeki maçları sırayla alıyoruz
+    let count = 1;
+    let processedKeys = new Set();
+
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        if (line.includes(" - ") && !/\d/.test(line.split(" - ")[0])) {
+            let [h, a] = line.split(" - ").map(t => t.trim());
+            let searchKey = (h + a).toLowerCase().replace(/\s/g, "");
+            
+            // Eğer bu maçı daha önce işlemediysek (numaralandırma için)
+            if (!processedKeys.has(searchKey)) {
+                let foundData = matchDataMap.get(searchKey) || { ms: "-", iy: "-" };
+                
+                let row = `<tr>
+                    <td class="no-cell">${count}</td>
+                    <td class="team-cell">${h} - ${a}</td>
+                    <td class="score-ms">${foundData.ms}</td>
+                    <td class="score-iy">${foundData.iy}</td>
+                </tr>`;
+                
+                resultBody.innerHTML += row;
+                processedKeys.add(searchKey);
+                count++;
+            }
+        }
+    }
+}
+
+function copyResult() {
+    let text = "";
+    const rows = document.querySelectorAll("#resultBody tr");
+    rows.forEach(row => {
+        const cells = row.querySelectorAll("td");
+        text += `${cells[0].innerText}\t${cells[1].innerText}\t${cells[2].innerText}\t${cells[3].innerText}\n`;
+    });
+    
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Liste başarıyla kopyalandı!");
     });
 }
 </script>
+
 </body>
 </html>
