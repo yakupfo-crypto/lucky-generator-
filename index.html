@@ -3,119 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Fikstür & Sonuç Eşleştirici</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Canlı Fikstür & Sonuç Paneli</title>
     <style>
-        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
-        .match-card { transition: all 0.2s ease; border-left: 4px solid transparent; }
-        .match-card:hover { background-color: #1e293b; border-left-color: #38bdf8; }
-        .score-box { background: #334155; border-radius: 4px; min-width: 60px; text-align: center; font-weight: bold; }
-        .iy-box { font-size: 0.75rem; color: #94a3b8; }
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --text: #333;
+            --border: #ddd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        h1 { text-align: center; color: var(--primary); margin-bottom: 20px; }
+
+        .status-bar {
+            background: var(--primary);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .match-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: 50px 1fr 100px 80px;
+            align-items: center;
+            gap: 10px;
+            border-left: 5px solid var(--accent);
+        }
+
+        .match-no { font-weight: bold; color: #888; }
+        .match-info { font-size: 0.95rem; }
+        .match-teams { font-weight: 600; display: block; margin-top: 3px; }
+        .match-score { 
+            background: #eef2f3; 
+            padding: 5px 10px; 
+            border-radius: 5px; 
+            text-align: center; 
+            font-weight: bold;
+            color: #d35400;
+        }
+        .match-half { font-size: 0.8rem; color: #666; text-align: center; }
+
+        /* Mobil Uyumluluk */
+        @media (max-width: 600px) {
+            .match-card {
+                grid-template-columns: 40px 1fr 70px;
+                grid-template-rows: auto auto;
+                font-size: 0.85rem;
+            }
+            .match-half {
+                grid-column: 3;
+                grid-row: 2;
+                margin-top: -10px;
+            }
+            .match-score { font-size: 0.9rem; }
+        }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body>
 
-<div class="max-w-4xl mx-auto">
-    <header class="mb-8 text-center">
-        <h1 class="text-3xl font-bold text-white mb-2">Maç Sonuçları Eşleştirme</h1>
-        <p class="text-slate-400">Fikstür ve sonuçları yapıştırın, anında eşleştirin.</p>
-    </header>
-
-    <div class="grid md:grid-cols-2 gap-4 mb-8">
-        <div>
-            <label class="block mb-2 text-sm font-medium">Fikstür Programı</label>
-            <textarea id="fixtureInput" class="w-full h-48 p-3 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Fikstür metnini buraya yapıştırın..."></textarea>
-        </div>
-        <div>
-            <label class="block mb-2 text-sm font-medium">Sonuçlar Kısmı</label>
-            <textarea id="resultsInput" class="w-full h-48 p-3 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Sonuç metnini buraya yapıştırın..."></textarea>
-        </div>
-    </div>
-
-    <button onclick="processData()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg mb-8 transition-all">
-        VERİLERİ EŞLEŞTİR VE SIRALA
-    </button>
-
-    <div id="output" class="space-y-2">
+<div class="container">
+    <h1>🏆 Maç Sonuçları Paneli</h1>
+    <div id="matchList">
         </div>
 </div>
 
 <script>
-function processData() {
-    const fixtureText = document.getElementById('fixtureInput').value;
-    const resultsText = document.getElementById('resultsInput').value;
-    const output = document.getElementById('output');
-    output.innerHTML = '';
+// Kullanıcının sağladığı metin blokları (Değişse bile kod çalışır)
+const fixtureData = `[FİKSTÜR METNİ BURAYA]`;
+const resultsData = `[SONUÇ METNİ BURAYA]`;
 
-    // 1. Fikstürü parçala (Saat - Takım A - Takım B formatı tahmini)
-    const fixtureLines = fixtureText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    let matches = [];
+// Örnek veriyi senin paylaştığın metinden simüle ediyoruz
+const rawFixture = document.body.innerText; // Sayfadaki ham metni baz alabilir
+
+function parseData() {
+    const text = document.body.innerText;
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     
-    // Basit bir eşleştirme mantığı: Satırda "-" varsa maç satırıdır
-    for (let i = 0; i < fixtureLines.length; i++) {
-        if (fixtureLines[i].includes('-') && i > 0) {
-            const teams = fixtureLines[i].split('-');
-            matches.push({
-                teamA: teams[0].trim(),
-                teamB: teams[1].trim(),
-                time: fixtureLines[i-1] // Bir önceki satır genelde saattir
+    let matches = [];
+    let resultsMap = new Map();
+
+    // 1. Adım: Sonuçları Haritala (Map)
+    // Maç isimlerini anahtar, skorları değer olarak saklar
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes(' - ') && (lines[i-1] === 'Bitti' || lines[i-1].includes("'") || lines[i-1] === 'PENMS')) {
+            let teams = lines[i].toLowerCase().replace(/\s+/g, '');
+            let score = lines[i+1] || "-";
+            let halfTime = "";
+            if (lines[i+2] && lines[i+2].includes("İ.Y")) {
+                halfTime = lines[i+2];
+            }
+            resultsMap.set(teams, { score, halfTime });
+        }
+    }
+
+    // 2. Adım: Fikstürü Oku ve Eşleştir
+    let fixtureMatches = [];
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes(' - ') && !lines[i-1].includes('Bitti') && lines[i].split('-').length === 2) {
+            let teamsRaw = lines[i];
+            let teamsKey = teamsRaw.toLowerCase().replace(/\s+/g, '');
+            
+            fixtureMatches.push({
+                name: teamsRaw,
+                time: lines[i-1] || "",
+                league: lines[i-2] || ""
             });
         }
     }
 
-    // 2. Sonuçları bir objeye haritala (Takım isimleri anahtar olacak)
-    const resultsMap = {};
-    const resultBlocks = resultsText.split(/(?=Bitti|90'|PENMS|ERT|UZMS)/g);
-
-    resultBlocks.forEach(block => {
-        const lines = block.split('\n').map(l => l.trim()).filter(l => l !== "");
-        if (lines.length >= 3) {
-            // Skorun olduğu satırı bul (Örn: 2 - 1)
-            const scoreIndex = lines.findIndex(l => /\d+\s*-\s*\d+/.test(l));
-            if (scoreIndex !== -1) {
-                const teamA = lines[scoreIndex - 1];
-                const teamB = lines[scoreIndex + 1];
-                const score = lines[scoreIndex];
-                
-                // İ.Y. skorunu bul
-                const iyLine = lines.find(l => l.includes('İ.Y'));
-                const iyScore = iyLine ? iyLine.replace('İ.Y', '').trim() : '-';
-
-                resultsMap[teamA] = { score, iyScore };
-            }
-        }
-    });
-
-    // 3. En alttan numaralandır (Diziyi ters çevir)
-    const reversedMatches = matches.reverse();
-
-    // 4. HTML Oluştur
-    reversedMatches.forEach((match, index) => {
-        const result = resultsMap[match.teamA] || { score: 'vs', iyScore: '-' };
-        const matchNo = index + 1;
-
-        const row = `
-            <div class="match-card bg-slate-800 p-3 flex items-center justify-between shadow-md">
-                <div class="flex items-center gap-4">
-                    <span class="text-blue-400 font-bold w-6">${matchNo}</span>
-                    <div class="flex flex-col">
-                        <span class="text-xs text-slate-500">${match.time}</span>
-                        <span class="text-sm md:text-base font-semibold text-slate-200">${match.teamA} - ${match.teamB}</span>
-                    </div>
-                </div>
-                <div class="flex flex-col items-end">
-                    <div class="score-box px-3 py-1 text-white">${result.score}</div>
-                    <div class="iy-box mt-1">İY: ${result.iyScore}</div>
-                </div>
+    // 3. Adım: Ters Numaralandır ve Render Et
+    const listContainer = document.getElementById('matchList');
+    listContainer.innerHTML = "";
+    
+    // En alttaki maç 1 olacak şekilde ters çeviriyoruz
+    const total = fixtureMatches.length;
+    
+    fixtureMatches.reverse().forEach((match, index) => {
+        const teamsKey = match.name.toLowerCase().replace(/\s+/g, '');
+        const result = resultsMap.get(teamsKey) || { score: "- / -", halfTime: "İ.Y - / -" };
+        
+        const card = document.createElement('div');
+        card.className = 'match-card';
+        card.innerHTML = `
+            <div class="match-no">#${index + 1}</div>
+            <div class="match-info">
+                <small>${match.league} (${match.time})</small>
+                <span class="match-teams">${match.name}</span>
             </div>
+            <div class="match-score">${result.score}</div>
+            <div class="match-half">${result.halfTime}</div>
         `;
-        output.innerHTML += row;
+        listContainer.appendChild(card);
     });
-
-    if (matches.length === 0) {
-        output.innerHTML = '<p class="text-center text-red-400">Eşleşen maç bulunamadı. Lütfen formatı kontrol edin.</p>';
-    }
 }
+
+// Sayfa yüklendiğinde çalıştır
+window.onload = parseData;
 </script>
 
 </body>
