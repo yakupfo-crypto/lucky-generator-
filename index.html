@@ -3,104 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Skor & Fikstür Eşleştirici</title>
+    <title>Fikstür & Sonuç Eşleştirici</title>
     <style>
         :root {
-            --primary: #2c3e50;
-            --secondary: #27ae60;
-            --accent: #e74c3c;
-            --light: #f4f7f6;
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --card: #ffffff;
         }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--light);
+            background-color: var(--bg);
+            color: var(--text);
             margin: 0;
             padding: 20px;
-            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-
         .container {
+            width: 100%;
             max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-
-        h2 { text-align: center; color: var(--primary); }
-
-        .input-sections {
+        h1 { text-align: center; color: var(--primary); margin-bottom: 20px; }
+        .input-area {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 20px;
         }
-
         textarea {
             width: 100%;
             height: 200px;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
             resize: vertical;
             font-size: 14px;
         }
-
         button {
             width: 100%;
             padding: 15px;
-            background-color: var(--secondary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        button:hover { background-color: #219150; }
-
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 30px;
-            overflow-x: auto;
-            display: block;
-        }
-
-        th {
             background-color: var(--primary);
             color: white;
-            padding: 12px;
-            text-align: left;
-        }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-            font-size: 14px;
-        }
-
-        tr:nth-child(even) { background-color: #f9f9f9; }
-
-        .score-box {
+            border: none;
+            border-radius: 10px;
             font-weight: bold;
-            color: var(--accent);
-            white-space: nowrap;
+            cursor: pointer;
+            font-size: 16px;
+            transition: opacity 0.2s;
         }
-
-        .iy-box {
-            font-size: 12px;
-            color: #7f8c8d;
+        button:hover { opacity: 0.9; }
+        .results-table {
+            width: 100%;
+            margin-top: 30px;
+            border-collapse: collapse;
+            background: var(--card);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
-
-        .no-match { color: #ccc; font-style: italic; }
-
+        th { background-color: #f1f5f9; padding: 15px; text-align: left; font-size: 14px; }
+        td { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        tr:last-child td { border-bottom: none; }
+        .no { font-weight: bold; color: var(--primary); width: 40px; }
+        .score { font-weight: bold; color: #dc2626; }
+        .iy { color: #64748b; font-size: 12px; }
         @media (max-width: 600px) {
-            .input-sections { grid-template-columns: 1fr; }
+            .input-area { grid-template-columns: 1fr; }
             td, th { padding: 8px; font-size: 12px; }
         }
     </style>
@@ -108,98 +78,94 @@
 <body>
 
 <div class="container">
-    <h2>⚽ Maç Sonucu Eşleştirici</h2>
+    <h1>⚽ Fikstür Sonuçlandırıcı</h1>
     
-    <div class="input-sections">
+    <div class="input-area">
         <div>
-            <label><strong>1. Fikstür Programı:</strong></label>
+            <label>Fikstür Programı:</label>
             <textarea id="fixtureInput" placeholder="Fikstür listesini buraya yapıştırın..."></textarea>
         </div>
         <div>
-            <label><strong>2. Maç Sonuçları:</strong></label>
-            <textarea id="resultInput" placeholder="Sonuçları buraya yapıştırın..."></textarea>
+            <label>Maç Sonuçları:</label>
+            <textarea id="resultsInput" placeholder="Sonuçları buraya yapıştırın..."></textarea>
         </div>
     </div>
+    
+    <button onclick="processData()">LİSTEYİ EŞLEŞTİR VE NUMARALANDIR</button>
 
-    <button onclick="processMatches()">VERİLERİ EŞLEŞTİR VE LİSTELE</button>
-
-    <table class="results-table" id="outputTable">
+    <table class="results-table" id="outputTable" style="display: none;">
         <thead>
             <tr>
-                <th>#</th>
-                <th>Saat / Lig</th>
-                <th>Ev Sahibi</th>
-                <th>Skor</th>
-                <th>Deplasman</th>
+                <th>No</th>
+                <th>Lig / Saat</th>
+                <th>Maç</th>
+                <th>Sonuç</th>
                 <th>İY</th>
             </tr>
         </thead>
-        <tbody id="resultBody">
-            </tbody>
+        <tbody id="tableBody"></tbody>
     </table>
 </div>
 
 <script>
-function processMatches() {
+function processData() {
     const fixtureText = document.getElementById('fixtureInput').value;
-    const resultText = document.getElementById('resultInput').value;
-    const resultBody = document.getElementById('resultBody');
-    resultBody.innerHTML = "";
-
-    // Fikstür parçalama
-    const fixtures = [];
-    const fixtureLines = fixtureText.split('\n').map(l => l.trim()).filter(l => l !== "");
+    const resultsText = document.getElementById('resultsInput').value;
+    const tableBody = document.getElementById('tableBody');
+    const table = document.getElementById('outputTable');
     
-    let currentLig = "";
-    for(let i=0; i < fixtureLines.length; i++) {
-        if (fixtureLines[i].includes(':') && fixtureLines[i].length <= 5) {
+    tableBody.innerHTML = '';
+    
+    // Fikstürü parçala
+    const fixtureLines = fixtureText.split('\n').map(l => l.trim()).filter(l => l !== "");
+    let fixtures = [];
+    let currentLeague = "";
+    
+    for (let i = 0; i < fixtureLines.length; i++) {
+        if (fixtureLines[i].includes(':') && !isNaN(fixtureLines[i][0])) {
             let time = fixtureLines[i];
-            let home = fixtureLines[i+1];
-            let away = fixtureLines[i+3];
-            fixtures.push({ time, lig: currentLig, home, away });
-            i += 3; 
-        } else {
-            currentLig = fixtureLines[i];
+            let team1 = fixtureLines[i+1];
+            let team2 = fixtureLines[i+3];
+            fixtures.push({ league: currentLeague, time: time, t1: team1, t2: team2 });
+            i += 3;
+        } else if (!fixtureLines[i].includes('-')) {
+            currentLeague = fixtureLines[i];
         }
     }
 
-    // Sonuçları parçalama ve Map'e atma
-    const resultMap = new Map();
-    const resultBlocks = resultText.split(/(?=Bitti|90'|81'|25'|PENMS|UZMS|ERT)/);
+    // Sonuçları parçala
+    const resultsRaw = resultsText.split(/(?=Bitti|90'|81'|25'|PENMS|UZMS|ERT)/);
+    let resultsMap = {};
 
-    resultBlocks.forEach(block => {
+    resultsRaw.forEach(block => {
         const lines = block.split('\n').map(l => l.trim()).filter(l => l !== "");
-        if(lines.length >= 4) {
-            let homeName = lines[1];
+        if (lines.length >= 4) {
+            let t1 = lines[1];
             let score = lines[2];
-            let awayName = lines[3];
+            let t2 = lines[3];
             let iy = "";
+            const iyLine = lines.find(l => l.includes('İ.Y'));
+            if (iyLine) iy = iyLine.replace('İ.Y', '').trim();
             
-            // İY skorunu bul
-            const iyLine = lines.find(l => l.includes("İ.Y"));
-            if(iyLine) iy = iyLine.replace("İ.Y", "").trim();
-
-            const key = (homeName + awayName).replace(/\s+/g, '').toLowerCase();
-            resultMap.set(key, { score, iy });
+            resultsMap[t1] = { score: score, iy: iy };
         }
     });
 
-    // Tabloyu oluştur
-    fixtures.forEach((fix, index) => {
-        const matchKey = (fix.home + fix.away).replace(/\s+/g, '').toLowerCase();
-        const matchData = resultMap.get(matchKey);
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${index + 1}</td>
-            <td><small>${fix.lig}</small><br><strong>${fix.time}</strong></td>
-            <td>${fix.home}</td>
-            <td class="score-box">${matchData ? matchData.score : '<span class="no-match">-</span>'}</td>
-            <td>${fix.away}</td>
-            <td class="iy-box">${matchData ? matchData.iy : '-'}</td>
-        `;
-        resultBody.appendChild(row);
+    // Eşleştir ve Tabloya Yaz
+    fixtures.forEach((f, index) => {
+        let matchResult = resultsMap[f.t1] || { score: "-", iy: "-" };
+        
+        let row = `<tr>
+            <td class="no">${index + 1}</td>
+            <td><small>${f.league}</small><br><b>${f.time}</b></td>
+            <td>${f.t1} - ${f.t2}</td>
+            <td class="score">${matchResult.score}</td>
+            <td class="iy">${matchResult.iy}</td>
+        </tr>`;
+        tableBody.innerHTML += row;
     });
+
+    table.style.display = 'table';
 }
 </script>
 
