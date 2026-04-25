@@ -3,201 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Sonuç İşleyici</title>
+    <title>Canlı Skor Paneli</title>
     <style>
         :root {
             --bg: #0f172a;
-            --card-bg: #1e293b;
+            --card: #1e293b;
+            --text: #f8fafc;
             --accent: #38bdf8;
-            --text-main: #f1f5f9;
-            --text-dim: #94a3b8;
-            --success: #22c55e;
+            --border: #334155;
+            --score-bg: #0f172a;
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            gap: 12px;
         }
-        .input-section {
-            width: 100%;
-            max-width: 900px;
-            margin-bottom: 30px;
-        }
-        textarea {
-            width: 100%;
-            height: 200px;
-            background: var(--card-bg);
-            border: 1px solid #334155;
-            color: white;
-            padding: 15px;
+
+        /* Modern Kart Tasarımı */
+        .match-item {
+            background: var(--card);
+            border: 1px solid var(--border);
             border-radius: 12px;
-            font-size: 14px;
-            resize: vertical;
-            outline: none;
-        }
-        button {
-            width: 100%;
             padding: 15px;
-            margin-top: 10px;
-            background: var(--accent);
-            border: none;
-            border-radius: 12px;
-            color: #0f172a;
-            font-weight: 800;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: 0.3s;
-        }
-        button:hover { opacity: 0.9; transform: translateY(-2px); }
-        
-        #output { width: 100%; max-width: 900px; }
-        
-        .league-title {
-            background: #334155;
-            padding: 8px 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            color: var(--accent);
-            border-left: 4px solid var(--accent);
-        }
-        
-        .match-row {
-            background: var(--card-bg);
-            margin: 5px 0;
-            padding: 15px;
-            border-radius: 10px;
             display: grid;
-            grid-template-columns: 1fr auto 1fr;
+            grid-template-columns: 80px 1fr 100px;
             align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
         }
-        
-        .team { font-weight: 500; font-size: 15px; }
-        .team.home { text-align: right; }
-        .team.away { text-align: left; }
-        
+
+        .match-item:hover { transform: translateY(-2px); border-color: var(--accent); }
+
+        .league-info {
+            font-size: 0.7rem;
+            color: var(--accent);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            grid-column: 1 / -1;
+        }
+
+        .status {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        .teams {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 0 10px;
+        }
+
+        .team-name {
+            font-size: 0.95rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .score-box {
-            background: #0f172a;
-            padding: 10px 20px;
+            background: var(--score-bg);
             border-radius: 8px;
+            padding: 8px;
             text-align: center;
-            min-width: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        
-        .ms { font-size: 18px; font-weight: 900; color: var(--success); display: block; }
-        .iy { font-size: 11px; color: var(--text-dim); margin-top: 4px; display: block; }
-        
-        @media (max-width: 600px) {
-            .match-row { grid-template-columns: 1fr 80px 1fr; padding: 10px; }
-            .team { font-size: 13px; }
-            .score-box { min-width: 60px; padding: 5px; }
+
+        .ms-score {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: 2px;
+        }
+
+        .iy-score {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* Mobil Uyumluluk */
+        @media (max-width: 480px) {
+            .match-item {
+                grid-template-columns: 60px 1fr 80px;
+                padding: 12px;
+            }
+            .ms-score { font-size: 1rem; }
+            .team-name { font-size: 0.85rem; }
         }
     </style>
 </head>
 <body>
 
-<div class="input-section">
-    <h2>Maç Verilerini Buraya Yapıştır</h2>
-    <textarea id="rawInput" placeholder="Fikstür ve sonuçları karmaşık şekilde buraya yapıştırın..."></textarea>
-    <button onclick="processData()">Sistemi Çalıştır ve Eşleştir</button>
-</div>
-
-<div id="output"></div>
+<div class="container" id="matchContainer">
+    </div>
 
 <script>
-function processData() {
-    const rawText = document.getElementById('rawInput').value;
-    const output = document.getElementById('output');
-    output.innerHTML = '';
+    // Dinamik Veri Yapısı: Buraya istediğin kadar maç ekleyebilirsin.
+    // Script otomatik olarak bu listeyi alttan üste doğru sıralayıp basar.
+    const macVerileri = [
+        { lig: "Peru Primera Ligi", ev: "Cultural San", dep: "CS Cienciano", ms: "1 - 0", iy: "0 - 0", durum: "Bitti" },
+        { lig: "Portekiz Kupası", ev: "Torreense", dep: "AD Fafe", ms: "2 - 0", iy: "0 - 0", durum: "Bitti" },
+        { lig: "İspanya La Liga", ev: "Real Oviedo", dep: "Villarreal", ms: "1 - 1", iy: "0 - 1", durum: "Bitti" },
+        { lig: "İzlanda Urvalsdeild", ev: "Vikingur Reykjavik", dep: "Stjarnan", ms: "3 - 2", iy: "1 - 1", durum: "Bitti" },
+        { lig: "Hollanda Eredivisie", ev: "PSV", dep: "Zwolle", ms: "6 - 1", iy: "1 - 0", durum: "Bitti" },
+        { lig: "Ziraat Türkiye Kupası", ev: "Beşiktaş", dep: "Alanyaspor", ms: "3 - 0", iy: "1 - 0", durum: "Bitti" }
+    ];
 
-    // Satırlara böl ve temizle
-    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    
-    let matches = [];
-    let currentLeague = "Diğer Ligler";
+    const container = document.getElementById('matchContainer');
 
-    // Mantık: Metni tarayıp maçları ve sonuçları yakala
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-
-        // Lig tespiti (Genelde sonunda Lig, Kupası, Turu gibi ifadeler olur)
-        if (line.includes('Lig') || line.includes('Kupa') || line.includes('Division') || line.includes('Açılış') || line.includes('Kapanış')) {
-            currentLeague = line;
-            continue;
-        }
-
-        // Maç satırı tespiti (Takım A - Takım B formatı veya alt alta isimler)
-        if (line === '-') {
-            const home = lines[i-1];
-            const away = lines[i+1];
-            
-            // Bu maçı sistemde ara (Sonuçlar kısmında var mı?)
-            const resultData = findResult(home, away, lines);
-            
-            matches.push({
-                league: currentLeague,
-                home: home,
-                away: away,
-                score: resultData.ms || '?-?',
-                iy: resultData.iy || 'İY: ?-?'
-            });
-        }
-    }
-
-    // Alttan üste doğru sırala (Kullanıcı isteği)
-    matches.reverse();
-
-    // Görselleştir
-    let lastLeague = "";
-    matches.forEach(m => {
-        if (m.league !== lastLeague) {
-            const leagueDiv = document.createElement('div');
-            leagueDiv.className = 'league-title';
-            leagueDiv.innerText = m.league;
-            output.appendChild(leagueDiv);
-            lastLeague = m.league;
-        }
-
-        const matchDiv = document.createElement('div');
-        matchDiv.className = 'match-row';
-        matchDiv.innerHTML = `
-            <div class="team home">${m.home}</div>
-            <div class="score-box">
-                <span class="ms">${m.score}</span>
-                <span class="iy">${m.iy}</span>
+    // MANTIK: Listeyi tersten (alttan üste) döngüye sokuyoruz
+    function renderMatches() {
+        const reversedData = [...macVerileri].reverse();
+        
+        container.innerHTML = reversedData.map(mac => `
+            <div class="match-item">
+                <div class="league-info">${mac.lig}</div>
+                <div class="status">${mac.durum}</div>
+                <div class="teams">
+                    <div class="team-name">${mac.ev}</div>
+                    <div class="team-name">${mac.dep}</div>
+                </div>
+                <div class="score-box">
+                    <div class="ms-score">${mac.ms}</div>
+                    <div class="iy-score">İY ${mac.iy}</div>
+                </div>
             </div>
-            <div class="team away">${m.away}</span>
-        `;
-        output.appendChild(matchDiv);
-    });
-}
-
-function findResult(h, a, allLines) {
-    let ms = "";
-    let iy = "";
-    for (let j = 0; j < allLines.length; j++) {
-        // Takım isimleri eşleşiyor mu kontrol et
-        if (allLines[j] === h && allLines[j+2] === a) {
-            // Bir alt satırda skor var mı? (Örn: 2 - 1)
-            if (allLines[j+1].includes('-')) {
-                ms = allLines[j+1];
-            }
-            // İlerleyen satırlarda İY var mı?
-            if (allLines[j+3] && allLines[j+3].includes('İ.Y')) {
-                iy = allLines[j+3].replace('İ.Y', 'İY:');
-            }
-        }
+        `).join('');
     }
-    return { ms, iy };
-}
+
+    // Uygulamayı başlat
+    renderMatches();
 </script>
 
 </body>
