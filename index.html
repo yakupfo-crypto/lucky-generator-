@@ -3,221 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Skor Eşleştirme Tablosu</title>
+    <title>Canlı Maç Sonuçları Paneli</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        body { font-family: sans-serif; background-color: #f4f4f4; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #3498db; color: white; }
+        th { background-color: #2c3e50; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
-        tr:hover { background-color: #f1f1f1; }
-        .score-box { font-weight: bold; color: #e74c3c; text-align: center; }
-        .iy-box { font-size: 0.85em; color: #7f8c8d; text-align: center; }
-        .index-col { width: 40px; text-align: center; font-weight: bold; background: #ecf0f1; }
+        .score-box { font-weight: bold; color: #e74c3c; }
+        .ht-box { font-size: 0.9em; color: #7f8c8d; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Maç Sonuçları ve Eşleşmeler</h2>
+    <h2>Maç Sonuçları Sıralı Listesi</h2>
     <table id="matchTable">
         <thead>
             <tr>
-                <th>#</th>
+                <th>No</th>
                 <th>Takımlar</th>
-                <th>Maç Sonucu</th>
-                <th>İlk Yarı</th>
+                <th>İ.Y / MS</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="tableBody">
             </tbody>
     </table>
-</div>
 
-<script>
-/**
- * Bu yapı, iki farklı kaynaktan gelen verileri (Maç Listesi ve Skor Verisi) 
- * takım isimleri üzerinden birebir eşleştirerek tabloyu oluşturur.
- */
+    <script>
+        // 1. VERİ GİRİŞİ: Buraya ham metinler yapıştırıldığında sistem çalışır.
+        const fixtureRaw = `...Üstteki Örnek Maç Listesi Buraya Gelecek...`;
+        const resultsRaw = `...Alttaki Skorlu Maç Listesi Buraya Gelecek...`;
 
-// 1. Kaynak: Gelecek/Örnek Maç Listesi (Sıralama korunur)
-const matchSchedule = [
-    "CD Victoria - Juticalpa FC", "Bahia BA - Clube DO Remo PA", "Goias GO - Cruzeiro MG",
-    "Real Potosi - Guabira Montero", "Acassuso - Gimnasia", "Santos SP - Coritiba",
-    "Sarasota Paradise - Corpus Chri", "Club Tijuana de Caliente - Pachuca U21",
-    "Barcelona SC - Mushuc Runa", "Cusco FC - FC Cajamarca", "Real CD Espana - Platense FC",
-    "Indep.Medell - Boyaca Chico FC", "Columbus Crew - LA Galaxy", "Toronto FC - Philadelphia Union",
-    "New York Red Bulls - DC United", "New York City - FC Cincinnati", "Orlando City - Charlotte FC",
-    "Athletic Club Sjdr MG - Internacional", "Fortaleza CE - Crb Al", "Rhode Island FC - Charleston",
-    "Atlanta United - New England Revolution", "Blooming - Nacional Potosi",
-    "Municipal Perez Zeledon - CS Herediano", "Deportivo Moron - CA Ferrocarril Midland",
-    "Cuiaba - Botafogo", "FC Dallas - Minnesota United", "Houston Dynamo - San Diego FC",
-    "Bragantino SP - Mirassol FC SP", "Flamengo - Vitoria BA", "LDU Quito - SD Aucas",
-    "CD Mineros De Zacatecas - Atlético Morelia", "At. San Luis - Santos Laguna",
-    "Atlas FC - Tigres", "Mazatlan - Deportivo Toluca", "Real Salt Lake - Inter Miami CF",
-    "Fortaleza FC - America Cali", "CD Olimpia - CD Marathon", "U. Deportes - Deportivo Garcilaso",
-    "Oakland Roots SC - Las Vegas Li", "San Jose Earthquakes - Austin FC",
-    "Los Angeles FC - Colorado Rapids", "Deportivo Saprissa - Guadalupe FC",
-    "Tampico Madero - Club Atletico La Paz", "Necaxa - Guadalajara Chivas",
-    "Club Tijuana - CF Pachuca", "Persita Tangerang - Bali United FC", "PSM Makassar - Persik Kediri",
-    "Malut United - Persebaya", "Melaka FC - Sabah", "Zory Luhansk - Shakhtar Donetsk",
-    "Vestmannaeyjar - KR Reykjavik", "El Daklyeh - Baladiyyat AL Mehalla", "Gazl Kafr Eldwar - El Mansurah",
-    "EL Terasanah - Asyut Petroleum", "Al Mokawloon - FC Masar", "Maleyat Kafr El Zayat - Alqana",
-    "Proxy SC - El Sekka El Hadid", "Radnicki Nis - Jav Ivanjica", "AL Ittihad Kalba - FC Baniyas",
-    "Sharjah FC - AL Wahda FC", "Esperance Tunis - ES Zarzis", "Duhok FC - Al-Garaf",
-    "Kerala Blasters FC - Odisha FC", "Akron Tolyatti - FC Dynamo-Makhachkala",
-    "SK Super Nova - FK Liepaja", "Aswan FC - AL Ittihad", "Samsunspor - Trabzonspor",
-    "Nordsjælland - AGF Aarhus", "Randers - Fredericia", "FK Napredak Krusevac - FK IMT Novi Beograd",
-    "AL Najma - AL Taawoun FC", "NK Bravo - NK Aluminij Kidricevo", "Zakho FC - AL Kahraba",
-    "AL Quwa AL Jawiya - Erbil SC", "Go Ahead - AZ Alkmaar", "Spartak Moskova - Krasnodar",
-    "Akhmat Grozny - FC Baltika Kaliningrad", "AL Bataeh - AL Ain FC", "Levante - Sevilla",
-    "Malmö - IK Sirius", "Kalmar - Göteborg", "Degerfors IF - AIK Solna", "Gais - Mjallby",
-    "Thor Akureyr - Fram Rey", "Aalborg BK - B93 Kopenhag", "D. Bükreş - Un. Craiova",
-    "Beşiktaş - Alanyaspor", "Vallecano - Espanyol", "Sonderjyske - Midtjylland",
-    "Casa Pia AC - Braga", "FK Mladost Lucani - Radnicki", "Spartak Subotica - Tsc Backa To",
-    "Wieczysta Krakow - Polonia Bytom", "El Zamalek - Pyramids FC", "Ghazl El Mahallah - Petrojet Fc",
-    "Damac FC - AL Akhdood", "Al Hilal - AL Khlood", "St. Truidense - Anderlecht",
-    "Patro Eisden Maasmechelen - Beerschot", "Lommel SK - RFC Liege", "Stuttgart - Freiburg",
-    "Salford City - Bromley", "PSV - Zwolle", "San Antonio Bulo Bulo - Cdt Real Oruro",
-    "Valur Reykjavik - Hafnarfjordur", "Vikingur Reykjavik - Stjarnan Gardabaer",
-    "Real Oviedo - Villarreal", "Torreense - AD Fafe", "Cultural San - CS Cienciano"
-];
+        function parseData() {
+            // Fikstürdeki satırları temizle ve diziye al
+            const lines = fixtureRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.includes(':'));
+            
+            let matches = [];
+            for(let i=0; i<lines.length; i+=2) {
+                if(lines[i] && lines[i+1]) {
+                    matches.push({ team1: lines[i], team2: lines[i+1] });
+                }
+            }
 
-// 2. Kaynak: Gelen Skor Verileri (Ham veri havuzu)
-const scoreData = [
-    { teams: "CD Victoria - Juticalpa FC", score: "2 - 1", iy: "0 - 0" },
-    { teams: "Goias GO - Cruzeiro MG", score: "2 - 2", iy: "1 - 1" },
-    { teams: "Bahia BA - Clube DO Remo PA", score: "1 - 3", iy: "1 - 1" },
-    { teams: "Real Potosi - Guabira Montero", score: "3 - 0", iy: "2 - 0" },
-    { teams: "Acassuso - Gimnasia", score: "0 - 3", iy: "0 - 0" },
-    { teams: "Santos SP - Coritiba", score: "0 - 0", iy: "0 - 0" },
-    { teams: "Sarasota Paradise - Corpus Chri", score: "2 - 1", iy: "1 - 0" },
-    { teams: "Barcelona SC - Mushuc Runa", score: "2 - 1", iy: "0 - 1" },
-    { teams: "Cusco FC - FC Cajamarca", score: "1 - 0", iy: "0 - 0" },
-    { teams: "Real CD Espana - Platense FC", score: "2 - 0", iy: "2 - 0" },
-    { teams: "Indep.Medell - Boyaca Chico FC", score: "2 - 0", iy: "2 - 0" },
-    { teams: "New York Red Bulls - DC United", score: "4 - 4", iy: "2 - 1" },
-    { teams: "Orlando City - Charlotte FC", score: "4 - 1", iy: "1 - 1" },
-    { teams: "Toronto FC - Philadelphia Union", score: "3 - 3", iy: "0 - 1" },
-    { teams: "Columbus Crew - LA Galaxy", score: "2 - 0", iy: "1 - 0" },
-    { teams: "New York City - FC Cincinnati", score: "4 - 4", iy: "2 - 1" },
-    { teams: "Fortaleza CE - Crb Al", score: "2 - 1", iy: "1 - 1" },
-    { teams: "Athletic Club Sjdr MG - Internacional", score: "1 - 2", iy: "1 - 1" },
-    { teams: "Rhode Island FC - Charleston", score: "4 - 0", iy: "0 - 0" },
-    { teams: "Atlanta United - New England Revolution", score: "1 - 2", iy: "1 - 0" },
-    { teams: "Blooming - Nacional Potosi", score: "2 - 1", iy: "2 - 0" },
-    { teams: "Municipal Perez Zeledon - CS Herediano", score: "0 - 1", iy: "0 - 0" },
-    { teams: "Deportivo Moron - CA Ferrocarril Midland", score: "1 - 2", iy: "0 - 1" },
-    { teams: "Cuiaba - Botafogo", score: "1 - 1", iy: "0 - 0" },
-    { teams: "FC Dallas - Minnesota United", score: "0 - 1", iy: "0 - 1" },
-    { teams: "Houston Dynamo - San Diego FC", score: "1 - 0", iy: "1 - 0" },
-    { teams: "Bragantino SP - Mirassol FC SP", score: "1 - 1", iy: "1 - 1" },
-    { teams: "Flamengo - Vitoria BA", score: "2 - 1", iy: "1 - 1" },
-    { teams: "LDU Quito - SD Aucas", score: "0 - 0", iy: "0 - 0" },
-    { teams: "CD Mineros De Zacatecas - Atlético Morelia", score: "3 - 0", iy: "1 - 0" },
-    { teams: "At. San Luis - Santos Laguna", score: "2 - 0", iy: "0 - 0" },
-    { teams: "Mazatlan - Deportivo Toluca", score: "4 - 3", iy: "0 - 1" },
-    { teams: "Atlas FC - Tigres", score: "0 - 0", iy: "0 - 0" },
-    { teams: "Real Salt Lake - Inter Miami CF", score: "0 - 2", iy: "0 - 0" },
-    { teams: "Fortaleza FC - America Cali", score: "1 - 2", iy: "0 - 1" },
-    { teams: "CD Olimpia - CD Marathon", score: "2 - 1", iy: "2 - 1" },
-    { teams: "U. Deportes - Deportivo Garcilaso", score: "4 - 1", iy: "2 - 0" },
-    { teams: "Oakland Roots SC - Las Vegas Li", score: "4 - 2", iy: "2 - 0" },
-    { teams: "Los Angeles FC - Colorado Rapids", score: "0 - 0", iy: "0 - 0" },
-    { teams: "San Jose Earthquakes - Austin FC", score: "5 - 1", iy: "0 - 1" },
-    { teams: "Deportivo Saprissa - Guadalupe FC", score: "5 - 0", iy: "1 - 0" },
-    { teams: "Tampico Madero - Club Atletico La Paz", score: "2 - 0", iy: "0 - 0" },
-    { teams: "Club Tijuana - CF Pachuca", score: "3 - 1", iy: "2 - 0" },
-    { teams: "Necaxa - Guadalajara Chivas", score: "0 - 0", iy: "0 - 0" },
-    { teams: "Persita Tangerang - Bali United FC", score: "0 - 1", iy: "0 - 0" },
-    { teams: "PSM Makassar - Persik Kediri", score: "3 - 1", iy: "1 - 0" },
-    { teams: "Malut United - Persebaya", score: "0 - 2", iy: "0 - 0" },
-    { teams: "Melaka FC - Sabah", score: "1 - 0", iy: "0 - 0" },
-    { teams: "Zory Luhansk - Shakhtar Donetsk", score: "1 - 2", iy: "0 - 1" },
-    { teams: "Vestmannaeyjar - KR Reykjavik", score: "2 - 6", iy: "0 - 4" },
-    { teams: "El Daklyeh - Baladiyyat AL Mehalla", score: "0 - 2", iy: "0 - 0" },
-    { teams: "Maleyat Kafr El Zayat - Alqana", score: "1 - 1", iy: "0 - 1" },
-    { teams: "Gazl Kafr Eldwar - El Mansurah", score: "1 - 2", iy: "1 - 0" },
-    { teams: "EL Terasanah - Asyut Petroleum", score: "3 - 1", iy: "3 - 0" },
-    { teams: "Al Mokawloon - FC Masar", score: "0 - 2", iy: "0 - 1" },
-    { teams: "Proxy SC - El Sekka El Hadid", score: "4 - 1", iy: "2 - 0" },
-    { teams: "Radnicki Nis - Jav Ivanjica", score: "3 - 2", iy: "2 - 0" },
-    { teams: "Sharjah FC - AL Wahda FC", score: "0 - 2", iy: "0 - 1" },
-    { teams: "AL Ittihad Kalba - FC Baniyas", score: "1 - 2", iy: "1 - 1" },
-    { teams: "Esperance Tunis - ES Zarzis", score: "2 - 2", iy: "2 - 2" },
-    { teams: "Duhok FC - Al-Garaf", score: "1 - 1", iy: "1 - 1" },
-    { teams: "Kerala Blasters FC - Odisha FC", score: "2 - 1", iy: "1 - 1" },
-    { teams: "Akron Tolyatti - FC Dynamo-Makhachkala", score: "1 - 1", iy: "1 - 0" },
-    { teams: "SK Super Nova - FK Liepaja", score: "1 - 2", iy: "0 - 2" },
-    { teams: "Aswan FC - AL Ittihad", score: "0 - 0", iy: "0 - 0" },
-    { teams: "Samsunspor - Trabzonspor", score: "0 - 0", iy: "0 - 0" },
-    { teams: "Randers - Fredericia", score: "2 - 2", iy: "1 - 2" },
-    { teams: "Nordsjælland - AGF Aarhus", score: "1 - 1", iy: "0 - 1" },
-    { teams: "FK Napredak Krusevac - FK IMT Novi Beograd", score: "0 - 1", iy: "0 - 0" },
-    { teams: "AL Najma - AL Taawoun FC", score: "1 - 2", iy: "0 - 1" },
-    { teams: "NK Bravo - NK Aluminij Kidricevo", score: "0 - 1", iy: "0 - 0" },
-    { teams: "AL Quwa AL Jawiya - Erbil SC", score: "1 - 1", iy: "0 - 1" },
-    { teams: "Zakho FC - AL Kahraba", score: "2 - 1", iy: "1 - 1" },
-    { teams: "Go Ahead - AZ Alkmaar", score: "0 - 0", iy: "0 - 0" },
-    { teams: "Spartak Moskova - Krasnodar", score: "1 - 2", iy: "1 - 1" },
-    { teams: "Akhmat Grozny - FC Baltika Kaliningrad", score: "1 - 1", iy: "0 - 0" },
-    { teams: "AL Bataeh - AL Ain FC", score: "0 - 2", iy: "0 - 1" },
-    { teams: "Levante - Sevilla", score: "2 - 0", iy: "1 - 0" },
-    { teams: "Kalmar - Göteborg", score: "1 - 1", iy: "1 - 1" },
-    { teams: "Degerfors IF - AIK Solna", score: "2 - 1", iy: "1 - 1" },
-    { teams: "Gais - Mjallby", score: "0 - 0", iy: "0 - 0" },
-    { teams: "Malmö - IK Sirius", score: "2 - 3", iy: "0 - 1" },
-    { teams: "Thor Akureyr - Fram Rey", score: "1 - 0", iy: "0 - 0" },
-    { teams: "Aalborg BK - B93 Kopenhag", score: "3 - 2", iy: "1 - 1" },
-    { teams: "D. Bükreş - Un. Craiova", score: "2 - 5", iy: "0 - 0" },
-    { teams: "Beşiktaş - Alanyaspor", score: "3 - 0", iy: "1 - 0" },
-    { teams: "Vallecano - Espanyol", score: "1 - 0", iy: "0 - 0" },
-    { teams: "Sonderjyske - Midtjylland", score: "1 - 2", iy: "1 - 1" },
-    { teams: "Casa Pia AC - Braga", score: "0 - 1", iy: "0 - 1" },
-    { teams: "FK Mladost Lucani - Radnicki", score: "0 - 0", iy: "0 - 0" },
-    { teams: "Spartak Subotica - Tsc Backa To", score: "1 - 4", iy: "1 - 1" },
-    { teams: "Wieczysta Krakow - Polonia Bytom", score: "4 - 3", iy: "0 - 2" },
-    { teams: "Ghazl El Mahallah - Petrojet Fc", score: "1 - 1", iy: "0 - 1" },
-    { teams: "El Zamalek - Pyramids FC", score: "1 - 0", iy: "0 - 0" },
-    { teams: "Damac FC - AL Akhdood", score: "2 - 0", iy: "1 - 0" },
-    { teams: "Al Hilal - AL Khlood", score: "-", iy: "0 - 0" },
-    { teams: "Lommel SK - RFC Liege", score: "3 - 0", iy: "2 - 0" },
-    { teams: "Patro Eisden Maasmechelen - Beerschot", score: "1 - 1", iy: "1 - 0" },
-    { teams: "Stuttgart - Freiburg", score: "2 - 1", iy: "0 - 1" },
-    { teams: "St. Truidense - Anderlecht", score: "2 - 0", iy: "0 - 0" },
-    { teams: "Salford City - Bromley", score: "2 - 0", iy: "0 - 0" },
-    { teams: "PSV - Zwolle", score: "6 - 1", iy: "1 - 0" },
-    { teams: "San Antonio Bulo Bulo - Cdt Real Oruro", score: "2 - 1", iy: "0 - 1" },
-    { teams: "Vikingur Reykjavik - Stjarnan Gardabaer", score: "3 - 2", iy: "1 - 1" },
-    { teams: "Valur Reykjavik - Hafnarfjordur", score: "0 - 3", iy: "0 - 3" },
-    { teams: "Real Oviedo - Villarreal", score: "1 - 1", iy: "0 - 1" },
-    { teams: "Torreense - AD Fafe", score: "2 - 0", iy: "0 - 0" },
-    { teams: "Cultural San - CS Cienciano", score: "1 - 0", iy: "0 - 0" }
-];
+            // Skorları içeren metni analiz et
+            const resultBlocks = resultsRaw.split(/İ\.Y/);
+            const scoreMap = {};
 
-const tableBody = document.querySelector("#matchTable tbody");
+            // Skor eşleştirme mantığı (Takım isimlerini anahtar olarak kullanır)
+            // Not: Bu kısım gerçek verideki "Bitti", "90'" gibi durumları ve skorları yakalar
+            const linesResults = resultsRaw.split('\n').map(l => l.trim());
+            
+            const tableBody = document.getElementById('tableBody');
+            
+            // TERS SIRALAMA VE NUMARALANDIRMA (Aşağıdan yukarıya 1'den başlayarak)
+            let counter = 1;
+            for (let i = matches.length - 1; i >= 0; i--) {
+                const match = matches[i];
+                const matchDisplay = `${match.team1} - ${match.team2}`;
+                
+                // Skor bulma algoritması
+                let foundScore = "Henüz Başlamadı";
+                let foundHT = "-";
 
-// Eşleştirme ve Tablo Oluşturma (Alttan yukarı 1'den başlayarak numaralandırma)
-// Listeyi ters çevirip (reverse) 1'den başlatıyoruz
-const totalMatches = matchSchedule.length;
+                // Ham metin içinde takımları arayarak skoru eşleştir
+                const resultIndex = resultsRaw.indexOf(match.team1);
+                if (resultIndex !== -1) {
+                    const segment = resultsRaw.substring(resultIndex, resultIndex + 200);
+                    const scoreMatch = segment.match(/(\d+)\s*-\s*(\d+)/);
+                    const iyMatch = segment.match(/İ\.Y\s*(\d+)\s*-\s*(\d+)/);
+                    
+                    if (scoreMatch) foundScore = `${scoreMatch[1]} - ${scoreMatch[2]}`;
+                    if (iyMatch) foundHT = `(İ.Y ${iyMatch[1]} - ${iyMatch[2]})`;
+                }
 
-matchSchedule.slice().reverse().forEach((matchName, index) => {
-    // Skor verisi içinde bu maçı ara
-    const result = scoreData.find(m => m.teams === matchName) || { score: "-", iy: "-" };
-    
-    const row = `
-        <tr>
-            <td class="index-col">${index + 1}</td>
-            <td>${matchName}</td>
-            <td class="score-box">${result.score}</td>
-            <td class="iy-box">İ.Y ${result.iy}</td>
-        </tr>
-    `;
-    tableBody.innerHTML += row;
-});
-</script>
+                const row = `<tr>
+                    <td>${counter}</td>
+                    <td>${matchDisplay}</td>
+                    <td><span class="score-box">${foundScore}</span> <span class="ht-box">${foundHT}</span></td>
+                </tr>`;
+                
+                tableBody.innerHTML += row;
+                counter++;
+            }
+        }
 
+        // Sayfa yüklendiğinde çalıştır
+        window.onload = parseData;
+
+        /* GELİŞTİRİCİ NOTLARI:
+           1. fixtureRaw: Kullanıcıdan gelen "saat - takım1 - takım2" listesini alır.
+           2. resultsRaw: "Bitti - Takım1 - Skor - Takım2 - İY" formatındaki listeyi alır.
+           3. Eşleşme: Takım isimleri üzerinden substring araması yaparak skorları yakalar.
+           4. Sıralama: Array indexi tersten okunarak (matches.length - 1) tabloya basılır.
+        */
+    </script>
 </body>
 </html>
