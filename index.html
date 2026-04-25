@@ -6,49 +6,46 @@
     <title>Dinamik Skor Eşleştirici</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .match-row:nth-child(even) { background-color: #1e293b; }
-        .live-pulse { animation: pulse 2s infinite; color: #22c55e; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        .input-area { background: #1e293b; border: 1px solid #334155; color: #94a3b8; transition: all 0.3s; }
+        .input-area:focus { border-color: #38bdf8; color: #fff; outline: none; }
+        .match-row { border-bottom: 1px solid #1e293b; transition: background 0.2s; }
+        .match-row:hover { background: #1e293b; }
+        .score-box { background: #0f172a; border: 1px solid #334155; min-width: 60px; text-align: center; border-radius: 6px; font-weight: bold; color: #38bdf8; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <div class="max-w-6xl mx-auto">
-        <h2 class="text-2xl font-bold mb-6 text-blue-400 border-b border-slate-700 pb-2">Maç Skor Eşleştirme Paneli</h2>
-        
-        <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <header class="mb-8 border-b border-slate-700 pb-4">
+            <h1 class="text-3xl font-bold text-white">LiveScore <span class="text-blue-500">Matcher</span></h1>
+            <p class="text-slate-400 text-sm">Program ve sonuç listelerini yapıştırın, sistem otomatik eşleştirsin.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div>
-                <label class="block text-sm font-medium mb-2 text-slate-400">1. Fikstür Listesi (Saatli Bölüm)</label>
-                <textarea id="fixtureInput" class="w-full h-48 p-3 bg-slate-800 border border-slate-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Buraya fikstür listesini yapıştırın..."></textarea>
+                <label class="block text-sm font-semibold mb-2 text-blue-400">1. Program Listesi (Saatli Bölüm)</label>
+                <textarea id="fixtureInput" class="input-area w-full h-48 p-4 rounded-lg text-xs" placeholder="00:00 CD Victoria - Juticalpa FC..."></textarea>
             </div>
             <div>
-                <label class="block text-sm font-medium mb-2 text-slate-400">2. Skor Listesi (Sonuçlu Bölüm)</label>
-                <textarea id="resultsInput" class="w-full h-48 p-3 bg-slate-800 border border-slate-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Buraya skorlu listeyi yapıştırın..."></textarea>
+                <label class="block text-sm font-semibold mb-2 text-green-400">2. Sonuç Listesi (Skorlu Bölüm)</label>
+                <textarea id="resultsInput" class="input-area w-full h-48 p-4 rounded-lg text-xs" placeholder="Bitti CD Victoria 2 - 1 Juticalpa FC..."></textarea>
             </div>
         </div>
 
-        <button onclick="matchMatches()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all mb-8 shadow-lg">
-            SKORLARI EŞLEŞTİR VE LİSTELE
-        </button>
+        <div class="flex justify-center mb-10">
+            <button onclick="matchMatches()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-12 rounded-full shadow-lg transform active:scale-95 transition">
+                VERİLERİ EŞLEŞTİR VE LİSTELE
+            </button>
+        </div>
 
-        <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-700 shadow-2xl">
-            <table class="w-full text-left border-collapse">
-                <thead class="bg-slate-800 text-slate-300 text-sm">
-                    <tr>
-                        <th class="p-4">SAAT / DURUM</th>
-                        <th class="p-4 text-right">EV SAHİBİ</th>
-                        <th class="p-4 text-center">SKOR</th>
-                        <th class="p-4 text-left">DEPLASMAN</th>
-                        <th class="p-4 text-center">İY</th>
-                    </tr>
-                </thead>
-                <tbody id="resultTableBody">
-                    <tr>
-                        <td colspan="5" class="p-10 text-center text-slate-500 italic">Henüz veri işlenmedi. Yukarıdaki alanlara listeleri yapıştırıp butona basın.</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div id="outputContainer" class="hidden bg-slate-900 rounded-xl shadow-2xl overflow-hidden border border-slate-800">
+            <div class="bg-slate-800 px-6 py-3 flex justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
+                <span>DURUM / İY</span>
+                <span class="mr-32">MAÇ VE SKOR</span>
+            </div>
+            <div id="matchList"></div>
         </div>
     </div>
 
@@ -56,77 +53,87 @@
         function matchMatches() {
             const fixtureText = document.getElementById('fixtureInput').value;
             const resultsText = document.getElementById('resultsInput').value;
-            const tbody = document.getElementById('resultTableBody');
-            tbody.innerHTML = '';
+            const matchList = document.getElementById('matchList');
+            const outputContainer = document.getElementById('outputContainer');
 
-            // 1. Fikstür Ayrıştırma (Saat ve Takımları bulur)
-            // Mantık: Saat formatından (00:00) sonra gelen iki satır takımlardır.
-            const fixLines = fixtureText.split('\n').map(l => l.trim()).filter(l => l !== "");
-            let fixtures = [];
-
-            for (let i = 0; i < fixLines.length; i++) {
-                if (/^\d{2}:\d{2}$/.test(fixLines[i])) {
-                    fixtures.push({
-                        time: fixLines[i],
-                        home: fixLines[i+1],
-                        away: fixLines[i+2]
-                    });
-                }
+            if(!fixtureText || !resultsText) {
+                alert("Lütfen her iki alanı da doldurun.");
+                return;
             }
 
-            // 2. Skor Ayrıştırma
-            // Mantık: Takım isimlerini anahtar olarak kullanıp altındaki skorları çeker.
-            const resLines = resultsText.split('\n').map(l => l.trim()).filter(l => l !== "");
-            
-            fixtures.forEach(fix => {
-                let matchData = { score: "- / -", iy: "-", status: "Bekliyor" };
-
-                // Skor listesinde ev sahibi takımı ara
-                const resIdx = resLines.findIndex(line => line === fix.home);
-                
-                if (resIdx !== -1 && resLines[resIdx + 1] === fix.away) {
-                    // Skor genellikle takımların bir üstündeki veya bir altındaki satırda olur.
-                    // Senin verdiğin örnekte Takım 1 - Takım 2 arasındaydı:
-                    matchData.score = resLines[resIdx + 1] === fix.away ? "Veri Bulunamadı" : "-";
-                    
-                    // Karmaşık metin içinde skor ve İY bulma (regex ile)
-                    // Alt alta olan satırlarda skor (0 - 0) ve İY (İ.Y 0 - 0) formatını arıyoruz.
-                    for(let j = resIdx - 5; j < resIdx + 10; j++) {
-                        if(!resLines[j]) continue;
-                        
-                        // Maç sonucu tespiti (Örn: 2 - 1)
-                        if (/^\d+\s*-\s*\d+$/.test(resLines[j])) {
-                            matchData.score = resLines[j];
-                        }
-                        // İY tespiti
-                        if (resLines[j].includes("İ.Y")) {
-                            matchData.iy = resLines[j].replace("İ.Y", "").trim();
-                        }
-                        // Durum tespiti (Bitti, 90', Ert vb.)
-                        if (["Bitti", "ERT", "PENMS", "UZMS"].includes(resLines[j]) || resLines[j].includes("'")) {
-                            matchData.status = resLines[j];
-                        }
-                    }
-                }
-
-                // Tabloya ekle
-                const isLive = matchData.status.includes("'");
-                const row = `
-                    <tr class="match-row border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
-                        <td class="p-4 text-xs">
-                            <div class="font-bold text-slate-400">${fix.time}</div>
-                            <div class="${isLive ? 'live-pulse font-bold' : 'text-slate-500'}">${matchData.status}</div>
-                        </td>
-                        <td class="p-4 text-right font-semibold text-sm md:text-base">${fix.home}</td>
-                        <td class="p-4 text-center">
-                            <span class="bg-slate-700 px-3 py-1 rounded text-blue-400 font-bold">${matchData.score}</span>
-                        </td>
-                        <td class="p-4 text-left font-semibold text-sm md:text-base">${fix.away}</td>
-                        <td class="p-4 text-center text-xs text-slate-400 font-mono">${matchData.iy}</td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
+            // 1. Programı Parse Et (Saat ve Takımlar)
+            const fixtureLines = fixtureText.split('\n').filter(l => l.includes('-'));
+            const fixtureData = fixtureLines.map(line => {
+                const parts = line.split(/(\d{2}:\d{2})/); // Saati ayır
+                const teams = (parts[2] || parts[0]).split('-');
+                return {
+                    time: parts[1] || "--:--",
+                    home: teams[0]?.trim(),
+                    away: teams[1]?.trim()
+                };
             });
+
+            // 2. Sonuçları Parse Et
+            // Takımları anahtar olarak kullanarak bir nesne oluşturuyoruz
+            const resultLines = resultsText.split('İ.Y');
+            const resultsMap = {};
+
+            resultLines.forEach(block => {
+                const lines = block.split('\n').filter(l => l.trim() !== "");
+                let home = "", away = "", score = "-", status = "Bitti", iy = "0-0";
+
+                // Skor ve takım tespiti için basit regex/logic
+                lines.forEach(l => {
+                    if(l.includes('-') && /\d/.test(l)) {
+                        const scoreMatch = l.match(/(\d+)\s*-\s*(\d+)/);
+                        if(scoreMatch) score = scoreMatch[0];
+                        
+                        // Skor satırı genelde takımların arasındadır veya altındadır
+                        // Bu kısım senin verdiğin formata göre esnektir
+                    }
+                });
+
+                // Örnek formatında takımlar skorun üstünde/altında olduğu için
+                // her bloğun içindeki takımları bulup map'e ekliyoruz
+                const foundTeams = lines.filter(l => l.length > 3 && !l.includes('-') && !l.includes('Bitti'));
+                if(foundTeams.length >= 2) {
+                    const key = (foundTeams[0].trim() + foundTeams[1].trim()).toLowerCase().replace(/\s/g, '');
+                    const iyMatch = block.match(/\d\s*-\s*\d/);
+                    resultsMap[key] = {
+                        score: score,
+                        iy: iyMatch ? iyMatch[0] : "0-0",
+                        status: block.includes('Bitti') ? "Bitti" : (block.includes('\'') ? "Canlı" : "Bitti")
+                    };
+                }
+            });
+
+            // 3. Eşleştir ve Yazdır
+            matchList.innerHTML = '';
+            fixtureData.forEach(m => {
+                const matchKey = (m.home + m.away).toLowerCase().replace(/\s/g, '');
+                const matchResult = resultsMap[matchKey] || { score: "- / -", iy: "- / -", status: "Bekliyor" };
+
+                matchList.innerHTML += `
+                    <div class="match-row p-4 md:p-6 flex items-center gap-4">
+                        <div class="w-20 flex flex-col">
+                            <span class="text-[10px] font-bold text-blue-500 uppercase">${matchResult.status}</span>
+                            <span class="text-xs text-slate-500 tracking-tighter">İY: ${matchResult.iy}</span>
+                        </div>
+                        
+                        <div class="flex-1 flex items-center justify-between">
+                            <div class="flex-1 text-right pr-3 md:pr-10 font-medium text-sm md:text-base">${m.home}</div>
+                            <div class="score-box px-3 py-1 text-lg">${matchResult.score}</div>
+                            <div class="flex-1 text-left pl-3 md:pl-10 font-medium text-sm md:text-base">${m.away}</div>
+                        </div>
+
+                        <div class="w-12 text-right text-xs text-slate-600 font-mono hidden md:block">
+                            ${m.time}
+                        </div>
+                    </div>
+                `;
+            });
+
+            outputContainer.classList.remove('hidden');
         }
     </script>
 </body>
