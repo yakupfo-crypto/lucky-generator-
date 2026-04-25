@@ -3,20 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Skor & Fikstür Eşleştirici</title>
+    <title>Canlı Skor & Fikstür Paneli</title>
     <style>
         :root {
-            --primary: #2c3e50;
-            --secondary: #27ae60;
-            --bg: #f4f7f6;
-            --white: #ffffff;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary-text: #1c1e21;
+            --secondary-text: #606770;
+            --accent: #007bff;
+            --border: #dddfe2;
+            --score-bg: #f8f9fa;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-text);
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -25,183 +29,156 @@
         .container {
             width: 100%;
             max-width: 800px;
-            background: var(--white);
-            padding: 20px;
+        }
+
+        .match-card {
+            background: var(--card-bg);
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        h2 { color: var(--primary); text-align: center; margin-bottom: 20px; }
-
-        .input-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        textarea {
-            width: 100%;
-            height: 150px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            resize: vertical;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 100%;
             padding: 15px;
-            background-color: var(--secondary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s;
         }
 
-        button:hover { background-color: #219150; }
+        .match-card:hover {
+            transform: translateY(-2px);
+        }
 
-        .result-table {
-            width: 100%;
-            margin-top: 25px;
-            border-collapse: collapse;
+        .order-num {
+            font-weight: bold;
+            color: var(--accent);
+            min-width: 35px;
             font-size: 0.9rem;
         }
 
-        .result-table tr {
-            border-bottom: 1px solid #eee;
+        .match-info {
+            flex-grow: 1;
+            padding: 0 10px;
         }
 
-        .result-table th {
-            background-color: var(--primary);
-            color: white;
-            padding: 12px;
-            text-align: left;
+        .league-name {
+            font-size: 0.75rem;
+            color: var(--secondary-text);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            display: block;
         }
 
-        .result-table td {
-            padding: 12px 8px;
+        .teams {
+            font-weight: 600;
+            font-size: 0.95rem;
+            line-height: 1.4;
         }
 
-        /* Mobil Görünüm Optimizasyonu */
-        @media (max-width: 600px) {
-            .input-group { grid-template-columns: 1fr; }
-            .result-table { font-size: 0.8rem; }
-            .container { padding: 10px; }
-            td { padding: 8px 4px; }
+        .score-section {
+            text-align: right;
+            min-width: 90px;
         }
 
-        .no-badge {
-            background: #eee;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: bold;
-            margin-right: 5px;
+        .main-score {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #d93025;
         }
 
-        .score { font-weight: bold; color: #e74c3c; }
-        .iy-score { color: #7f8c8d; font-size: 0.8rem; }
+        .ht-score {
+            font-size: 0.75rem;
+            color: var(--secondary-text);
+            margin-top: 2px;
+            display: block;
+        }
+
+        @media (max-width: 480px) {
+            .match-card { padding: 10px; }
+            .teams { font-size: 0.85rem; }
+            .main-score { font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Fikstür & Sonuç Eşleştirici</h2>
-    
-    <div class="input-group">
-        <textarea id="fixInput" placeholder="Fikstür programını buraya yapıştırın..."></textarea>
-        <textarea id="resInput" placeholder="Sonuçlar kısmını buraya yapıştırın..."></textarea>
+<div class="container" id="matchList">
     </div>
 
-    <button onclick="processData()">VERİLERİ EŞLEŞTİR VE LİSTELE</button>
-
-    <table class="result-table" id="outputTable">
-        <thead>
-            <tr>
-                <th>No</th>
-                <th>Maç</th>
-                <th>MS</th>
-                <th>İY</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody">
-            </tbody>
-    </table>
-</div>
-
 <script>
-function processData() {
-    const fixText = document.getElementById('fixInput').value;
-    const resText = document.getElementById('resInput').value;
-    const tableBody = document.getElementById('tableBody');
-    tableBody.innerHTML = '';
+// Kullanıcıdan gelen ham veriler (Örnek yapı)
+const fixtureRaw = `Honduras Ulusal Lig, Kapanış
+00:00
+CD Victoria
+-
+Juticalpa FC
+... (Tüm fikstürü buraya yapıştırabilirsiniz)`;
 
-    // Fikstür Parçalama (Takımları bulma)
-    const fixLines = fixText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+const resultsRaw = `Bitti
+CD Victoria
+2 - 1
+Juticalpa FC
+İ.Y 0 - 0
+... (Tüm sonuçları buraya yapıştırabilirsiniz)`;
+
+// Veri işleme fonksiyonu
+function processMatches() {
+    const fixtureLines = fixtureRaw.split('\n').map(l => l.trim()).filter(l => l !== "");
+    const resultsLines = resultsRaw.split('\n').map(l => l.trim()).filter(l => l !== "");
+
     let fixtures = [];
-    
-    for (let i = 0; i < fixLines.length; i++) {
-        if (fixLines[i] === '-') {
-            let home = fixLines[i-1];
-            let away = fixLines[i+1];
-            if(home && away) {
-                fixtures.push({ home, away });
-            }
+    // Fikstür ayrıştırma (Basit mantık: Takım - Takım yapısını bul)
+    for (let i = 0; i < fixtureLines.length; i++) {
+        if (fixtureLines[i] === "-") {
+            fixtures.push({
+                home: fixtureLines[i-1],
+                away: fixtureLines[i+1],
+                league: fixtureLines[i-3] || "Lig Bilgisi Yok"
+            });
         }
     }
 
-    // Sonuç Parçalama (Skorları bulma)
-    const resBlocks = resText.split('Bitti').filter(b => b.trim().length > 0);
     let resultsMap = {};
-
-    resBlocks.forEach(block => {
-        const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        let homeTeam = "";
-        let awayTeam = "";
-        let score = "-";
-        let iyScore = "-";
-
-        for (let j = 0; j < lines.length; j++) {
-            if (lines[j].includes(' - ') && /\d/.test(lines[j])) {
-                score = lines[j];
-                homeTeam = lines[j-1];
-                awayTeam = lines[j+1];
-            }
-            if (lines[j].startsWith('İ.Y')) {
-                iyScore = lines[j].replace('İ.Y', '').trim();
-            }
+    // Sonuç ayrıştırma (Skor ve İY verilerini eşleştirme)
+    for (let i = 0; i < resultsLines.length; i++) {
+        if (resultsLines[i].includes("-") && /\d/.test(resultsLines[i])) {
+            const homeTeam = resultsLines[i-1];
+            const score = resultsLines[i];
+            const awayTeam = resultsLines[i+1];
+            const ht = resultsLines[i+2]?.startsWith("İ.Y") ? resultsLines[i+2] : "İ.Y -";
+            
+            const key = (homeTeam + awayTeam).replace(/\s+/g, '').toLowerCase();
+            resultsMap[key] = { score, ht };
         }
-
-        if(homeTeam && awayTeam) {
-            let key = (homeTeam + awayTeam).replace(/\s+/g, '').toLowerCase();
-            resultsMap[key] = { score, iyScore };
-        }
-    });
-
-    // Eşleştirme ve Tersten Numaralandırma
-    // En alttaki maç 1 olacak şekilde numaralandırıyoruz
-    const total = fixtures.length;
-    
-    for (let i = 0; i < total; i++) {
-        let f = fixtures[i];
-        let key = (f.home + f.away).replace(/\s+/g, '').toLowerCase();
-        let matchRes = resultsMap[key] || { score: '?', iyScore: '?' };
-        
-        let row = `<tr>
-            <td><span class="no-badge">${total - i}</span></td>
-            <td>${f.home} - ${f.away}</td>
-            <td class="score">${matchRes.score}</td>
-            <td class="iy-score">${matchRes.iyScore}</td>
-        </tr>`;
-        
-        // Yukarıya doğru ekle (En son eklenen en üstte görünür ama no'su büyük olur)
-        tableBody.insertAdjacentHTML('afterbegin', row);
     }
+
+    const container = document.getElementById('matchList');
+    
+    // Maçları numaralandır (En alttan 1 ile başla)
+    const processedData = fixtures.reverse(); 
+
+    processedData.forEach((match, index) => {
+        const matchKey = (match.home + match.away).replace(/\s+/g, '').toLowerCase();
+        const result = resultsMap[matchKey] || { score: "- / -", ht: "İ.Y - / -" };
+        
+        const card = document.createElement('div');
+        card.className = 'match-card';
+        card.innerHTML = `
+            <div class="order-num">${processedData.length - index}</div>
+            <div class="match-info">
+                <span class="league-name">${match.league}</span>
+                <div class="teams">${match.home} vs ${match.away}</div>
+            </div>
+            <div class="score-section">
+                <span class="main-score">${result.score}</span>
+                <span class="ht-score">${result.ht}</span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
 }
+
+// Uygulamayı çalıştır
+window.onload = processMatches;
 </script>
 
 </body>
