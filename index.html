@@ -7,133 +7,149 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
-        .input-area { background: #1e293b; border: 1px solid #334155; color: #94a3b8; transition: all 0.3s; }
-        .input-area:focus { border-color: #38bdf8; color: #fff; outline: none; }
-        .match-row { border-bottom: 1px solid #1e293b; transition: background 0.2s; }
-        .match-row:hover { background: #1e293b; }
-        .score-box { background: #0f172a; border: 1px solid #334155; min-width: 60px; text-align: center; border-radius: 6px; font-weight: bold; color: #38bdf8; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .match-row:nth-child(even) { background-color: #1e293b; }
+        .live-pulse { animation: pulse 2s infinite; color: #22c55e; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        textarea { scrollbar-width: thin; scrollbar-color: #475569 #1e293b; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <div class="max-w-6xl mx-auto">
-        <header class="mb-8 border-b border-slate-700 pb-4">
-            <h1 class="text-3xl font-bold text-white">LiveScore <span class="text-blue-500">Matcher</span></h1>
-            <p class="text-slate-400 text-sm">Program ve sonuç listelerini yapıştırın, sistem otomatik eşleştirsin.</p>
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-extrabold text-blue-500 mb-2">LiveMatch Processor</h1>
+            <p class="text-slate-400 text-sm">Fikstür ve sonuçları yapıştırın, sistem anında eşleştirsin.</p>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="grid md:grid-cols-2 gap-4 mb-6">
             <div>
-                <label class="block text-sm font-semibold mb-2 text-blue-400">1. Program Listesi (Saatli Bölüm)</label>
-                <textarea id="fixtureInput" class="input-area w-full h-48 p-4 rounded-lg text-xs" placeholder="00:00 CD Victoria - Juticalpa FC..."></textarea>
+                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">1. Fikstür Listesi (Ham Metin)</label>
+                <textarea id="fixtureInput" class="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Maç listesini buraya yapıştırın..."></textarea>
             </div>
             <div>
-                <label class="block text-sm font-semibold mb-2 text-green-400">2. Sonuç Listesi (Skorlu Bölüm)</label>
-                <textarea id="resultsInput" class="input-area w-full h-48 p-4 rounded-lg text-xs" placeholder="Bitti CD Victoria 2 - 1 Juticalpa FC..."></textarea>
+                <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">2. Sonuç Listesi (Ham Metin)</label>
+                <textarea id="resultsInput" class="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-green-500 outline-none" placeholder="Sonuçları buraya yapıştırın..."></textarea>
             </div>
         </div>
 
-        <div class="flex justify-center mb-10">
-            <button onclick="matchMatches()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-12 rounded-full shadow-lg transform active:scale-95 transition">
-                VERİLERİ EŞLEŞTİR VE LİSTELE
-            </button>
-        </div>
+        <button onclick="processScores()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg mb-8 uppercase tracking-widest">
+            Verileri Birleştir ve Listele
+        </button>
 
-        <div id="outputContainer" class="hidden bg-slate-900 rounded-xl shadow-2xl overflow-hidden border border-slate-800">
-            <div class="bg-slate-800 px-6 py-3 flex justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
-                <span>DURUM / İY</span>
-                <span class="mr-32">MAÇ VE SKOR</span>
+        <div id="displayArea" class="hidden bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-800 text-slate-400 text-xs uppercase">
+                        <tr>
+                            <th class="p-4">Durum</th>
+                            <th class="p-4 text-right">Ev Sahibi</th>
+                            <th class="p-4 text-center">MS</th>
+                            <th class="p-4">Deplasman</th>
+                            <th class="p-4 text-center">İY</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matchTableBody">
+                        </tbody>
+                </table>
             </div>
-            <div id="matchList"></div>
         </div>
     </div>
 
     <script>
-        function matchMatches() {
+        function normalizeName(name) {
+            return name.toLowerCase()
+                .trim()
+                .replace(/\s+/g, '')
+                .replace(/[^\w\s]/gi, '');
+        }
+
+        function processScores() {
             const fixtureText = document.getElementById('fixtureInput').value;
             const resultsText = document.getElementById('resultsInput').value;
-            const matchList = document.getElementById('matchList');
-            const outputContainer = document.getElementById('outputContainer');
+            const tableBody = document.getElementById('matchTableBody');
+            const displayArea = document.getElementById('displayArea');
 
-            if(!fixtureText || !resultsText) {
-                alert("Lütfen her iki alanı da doldurun.");
+            if (!fixtureText || !resultsText) {
+                alert("Lütfen her iki alanı da doldurun!");
                 return;
             }
 
-            // 1. Programı Parse Et (Saat ve Takımlar)
-            const fixtureLines = fixtureText.split('\n').filter(l => l.includes('-'));
-            const fixtureData = fixtureLines.map(line => {
-                const parts = line.split(/(\d{2}:\d{2})/); // Saati ayır
-                const teams = (parts[2] || parts[0]).split('-');
-                return {
-                    time: parts[1] || "--:--",
-                    home: teams[0]?.trim(),
-                    away: teams[1]?.trim()
-                };
-            });
+            // 1. Sonuçları Parse Et (Takım isimlerini anahtar yaparak sakla)
+            const resultsMap = new Map();
+            const resultLines = resultsText.split('\n');
+            
+            let currentHome = "";
+            let currentAway = "";
+            let currentScore = "-";
+            let currentIY = "-";
+            let currentStatus = "";
 
-            // 2. Sonuçları Parse Et
-            // Takımları anahtar olarak kullanarak bir nesne oluşturuyoruz
-            const resultLines = resultsText.split('İ.Y');
-            const resultsMap = {};
+            for (let i = 0; i < resultLines.length; i++) {
+                let line = resultLines[i].trim();
+                if (!line) continue;
 
-            resultLines.forEach(block => {
-                const lines = block.split('\n').filter(l => l.trim() !== "");
-                let home = "", away = "", score = "-", status = "Bitti", iy = "0-0";
-
-                // Skor ve takım tespiti için basit regex/logic
-                lines.forEach(l => {
-                    if(l.includes('-') && /\d/.test(l)) {
-                        const scoreMatch = l.match(/(\d+)\s*-\s*(\d+)/);
-                        if(scoreMatch) score = scoreMatch[0];
-                        
-                        // Skor satırı genelde takımların arasındadır veya altındadır
-                        // Bu kısım senin verdiğin formata göre esnektir
+                // Skor ve İY yakalama mantığı
+                if (line.includes(' - ') && /\d/.test(line)) {
+                    if (line.startsWith('İ.Y')) {
+                        currentIY = line.replace('İ.Y', '').trim();
+                    } else {
+                        currentScore = line.trim();
                     }
-                });
-
-                // Örnek formatında takımlar skorun üstünde/altında olduğu için
-                // her bloğun içindeki takımları bulup map'e ekliyoruz
-                const foundTeams = lines.filter(l => l.length > 3 && !l.includes('-') && !l.includes('Bitti'));
-                if(foundTeams.length >= 2) {
-                    const key = (foundTeams[0].trim() + foundTeams[1].trim()).toLowerCase().replace(/\s/g, '');
-                    const iyMatch = block.match(/\d\s*-\s*\d/);
-                    resultsMap[key] = {
-                        score: score,
-                        iy: iyMatch ? iyMatch[0] : "0-0",
-                        status: block.includes('Bitti') ? "Bitti" : (block.includes('\'') ? "Canlı" : "Bitti")
-                    };
-                }
-            });
-
-            // 3. Eşleştir ve Yazdır
-            matchList.innerHTML = '';
-            fixtureData.forEach(m => {
-                const matchKey = (m.home + m.away).toLowerCase().replace(/\s/g, '');
-                const matchResult = resultsMap[matchKey] || { score: "- / -", iy: "- / -", status: "Bekliyor" };
-
-                matchList.innerHTML += `
-                    <div class="match-row p-4 md:p-6 flex items-center gap-4">
-                        <div class="w-20 flex flex-col">
-                            <span class="text-[10px] font-bold text-blue-500 uppercase">${matchResult.status}</span>
-                            <span class="text-xs text-slate-500 tracking-tighter">İY: ${matchResult.iy}</span>
-                        </div>
+                } else if (line === "Bitti" || line === "ERT" || line.includes("'") || line === "PENMS" || line === "UZMS") {
+                    currentStatus = line;
+                } else {
+                    // Takım ismi olma ihtimali (Eğer skor değilse ve durum değilse)
+                    // Basit bir state machine: ilk gelen ev, ikinci gelen deplasman
+                    if (!currentHome) {
+                        currentHome = line;
+                    } else if (!currentAway) {
+                        currentAway = line;
+                        // Kaydet ve sıfırla
+                        const key = normalizeName(currentHome) + normalizeName(currentAway);
+                        resultsMap.set(key, { score: currentScore, iy: currentIY, status: currentStatus });
                         
-                        <div class="flex-1 flex items-center justify-between">
-                            <div class="flex-1 text-right pr-3 md:pr-10 font-medium text-sm md:text-base">${m.home}</div>
-                            <div class="score-box px-3 py-1 text-lg">${matchResult.score}</div>
-                            <div class="flex-1 text-left pl-3 md:pl-10 font-medium text-sm md:text-base">${m.away}</div>
-                        </div>
+                        // Bir sonraki maç için temizle ama skorları/statüyü default yap
+                        currentHome = ""; currentAway = ""; currentScore = "-"; currentIY = "-"; currentStatus = "";
+                    }
+                }
+            }
 
-                        <div class="w-12 text-right text-xs text-slate-600 font-mono hidden md:block">
-                            ${m.time}
-                        </div>
-                    </div>
-                `;
-            });
+            // 2. Fikstürle Eşleştir ve Tabloyu Oluştur
+            tableBody.innerHTML = '';
+            const fixtureLines = fixtureText.split('\n');
+            let fixHome = "";
+            let fixAway = "";
 
-            outputContainer.classList.remove('hidden');
+            for (let j = 0; j < fixtureLines.length; j++) {
+                let line = fixtureLines[j].trim();
+                if (line.includes(' - ') && !/\d/.test(line)) {
+                    const teams = line.split(' - ');
+                    fixHome = teams[0].trim();
+                    fixAway = teams[1].trim();
+
+                    const key = normalizeName(fixHome) + normalizeName(fixAway);
+                    const data = resultsMap.get(key) || { score: '?', iy: '?', status: 'Bekliyor' };
+
+                    const statusClass = (data.status !== "Bitti" && data.status !== "ERT" && data.status !== "Bekliyor") ? "live-pulse font-bold" : "text-slate-500";
+
+                    const row = `
+                        <tr class="match-row border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                            <td class="p-4 text-xs ${statusClass}">${data.status}</td>
+                            <td class="p-4 text-right font-semibold text-sm md:text-base">${fixHome}</td>
+                            <td class="p-4 text-center">
+                                <span class="bg-slate-700 px-3 py-1 rounded text-blue-400 font-bold">${data.score}</span>
+                            </td>
+                            <td class="p-4 text-left font-semibold text-sm md:text-base">${fixAway}</td>
+                            <td class="p-4 text-center text-xs text-slate-400 font-mono">${data.iy}</td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                }
+            }
+
+            displayArea.classList.remove('hidden');
+            displayArea.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
 </body>
