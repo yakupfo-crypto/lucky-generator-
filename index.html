@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Maç Numaralandırıcı</title>
+    <title>Canlı Maç Listesi Numaralandırıcı</title>
     <style>
         :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
             --primary-color: #2c3e50;
             --accent-color: #27ae60;
-            --bg-color: #f4f7f6;
             --text-color: #333;
         }
 
@@ -26,15 +27,12 @@
         .container {
             width: 100%;
             max-width: 800px;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        h2 {
+        h1 {
             text-align: center;
             color: var(--primary-color);
+            font-size: 1.5rem;
             margin-bottom: 20px;
         }
 
@@ -43,7 +41,7 @@
             height: 200px;
             padding: 15px;
             border: 2px solid #ddd;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 14px;
             resize: vertical;
             box-sizing: border-box;
@@ -57,12 +55,12 @@
 
         button {
             width: 100%;
-            padding: 15px;
-            margin-top: 15px;
             background-color: var(--accent-color);
             color: white;
             border: none;
-            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 10px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
@@ -73,122 +71,127 @@
             background-color: #219150;
         }
 
-        #result {
+        #matchList {
             margin-top: 25px;
-            white-space: pre-wrap;
-            line-height: 1.6;
-        }
-
-        .match-row {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
             display: flex;
+            flex-direction: column;
             gap: 10px;
         }
 
+        .match-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            border-left: 5px solid var(--accent-color);
+            animation: fadeIn 0.4s ease;
+        }
+
         .match-number {
+            background: var(--primary-color);
+            color: white;
+            min-width: 35px;
+            height: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
             font-weight: bold;
-            color: var(--accent-color);
-            min-width: 30px;
+            margin-right: 15px;
+            font-size: 14px;
         }
 
-        .match-content {
-            flex: 1;
+        .match-details {
+            flex-grow: 1;
+            white-space: pre-wrap;
+            line-height: 1.4;
         }
 
-        .league-title {
-            background: #e9ecef;
-            padding: 5px 10px;
-            font-weight: bold;
-            font-size: 0.9em;
-            margin-top: 15px;
-            border-radius: 4px;
-            color: #555;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Mobil Uyumluluk */
-        @media (max-width: 600px) {
+        /* Mobil Düzenleme */
+        @media (max-width: 480px) {
             body { padding: 10px; }
-            .container { padding: 15px; }
-            button { font-size: 14px; }
+            .match-card { padding: 10px; }
+            h1 { font-size: 1.2rem; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Maç Listesi Numaralandırıcı</h2>
-    <p style="font-size: 12px; color: #666; text-align: center;">Maç listesini yapıştırın. En alttaki maç 1'den başlayarak numaralandırılacaktır.</p>
+    <h1>Maç Listesi Düzenleyici</h1>
     
-    <textarea id="inputList" placeholder="Maçları buraya yapıştırın..."></textarea>
-    
-    <button onclick="processList()">LİSTEYİ OLUŞTUR</button>
+    <textarea id="inputData" placeholder="Maç listesini buraya yapıştırın..."></textarea>
+    <button onclick="processMatches()">LİSTEYİ OLUŞTUR</button>
 
-    <div id="result"></div>
+    <div id="matchList"></div>
 </div>
 
 <script>
-    function processList() {
-        const input = document.getElementById('inputList').value;
-        const resultDiv = document.getElementById('result');
-        
-        if (!input.trim()) {
-            alert("Lütfen bir liste yapıştırın!");
+    function processMatches() {
+        const input = document.getElementById('inputData').value.trim();
+        const container = document.getElementById('matchList');
+        container.innerHTML = ''; // Temizle
+
+        if (!input) {
+            alert("Lütfen bir liste girin!");
             return;
         }
 
-        // Satırlara böl ve temizle
-        let lines = input.split('\n').map(line => line.trim());
-        
-        let matchBlocks = [];
-        let currentBlock = "";
+        // Maçları bloklara ayır (Genelde zaman damgaları veya lig isimleri arasındaki boşluklardan)
+        // Bu mantık: "00:00" gibi saat formatlarını veya satır başlarını baz alır.
+        const lines = input.split('\n');
+        let matches = [];
+        let currentMatch = "";
 
-        // Maçları tespit etme mantığı (Saat içeren satırlar maç başlangıcı kabul edilir)
-        // Ancak senin formatında "Takım - Takım" yapısı asıl maç satırı.
+        // Basit bir gruplandırma mantığı: 
+        // Eğer satırda "-" varsa veya bir önceki satır saat ise bu bir maç bloğudur.
+        // Ancak en garanti yol, kullanıcıdan gelen metni anlamlı satırlara bölmektir.
         
-        let finalOutput = [];
-        let matchesFound = [];
+        // Boş satırları temizleyip anlamlı satırları alıyoruz
+        const filteredLines = lines.filter(line => line.trim() !== "");
 
-        // Önce tüm maçları (tire içeren satırları) ayıklayalım
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].includes('-') && lines[i].length > 3) {
-                matchesFound.push({
-                    originalIndex: i,
-                    content: lines[i]
-                });
+        // Maçları tespit etme (Her 3-4 satır bir maç kabul edilebilir ancak 
+        // en sağlamı "-" içeren satırları bulmaktır)
+        let tempMatch = [];
+        for (let i = 0; i < filteredLines.length; i++) {
+            tempMatch.push(filteredLines[i]);
+            
+            // Eğer satırda "-" varsa, bu maçın ana satırıdır. 
+            // Bir sonraki satırda takımlar biter.
+            if (filteredLines[i].includes('-')) {
+                matches.push(tempMatch.join('\n'));
+                tempMatch = [];
             }
         }
 
-        // En alttaki maça 1 verecek şekilde numaraları ters ata
-        let matchCounter = matchesFound.length;
-        let matchMap = {};
+        // Eğer yukarıdaki mantık eksik kalırsa (farklı formatlar için), 
+        // doğrudan satır satır numara vermek de bir seçenektir.
+        // Ama bizden istenen "Maç bazlı" numaralandırma.
 
-        matchesFound.forEach((match) => {
-            matchMap[match.originalIndex] = matchCounter--;
+        // Alttan 1'den başlayarak numaralandırmak için diziyi ters çeviriyoruz
+        const totalMatches = matches.length;
+        
+        matches.forEach((match, index) => {
+            // Ters sıra numarası: Toplam - Mevcut Endeks
+            const displayNumber = totalMatches - index;
+
+            const card = document.createElement('div');
+            card.className = 'match-card';
+            
+            card.innerHTML = `
+                <div class="match-number">${displayNumber}</div>
+                <div class="match-details">${match}</div>
+            `;
+            
+            container.appendChild(card);
         });
-
-        // Çıktıyı oluştur
-        let html = "";
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i] === "") continue;
-
-            if (matchMap[i]) {
-                html += `<div class="match-row">
-                            <span class="match-number">${matchMap[i]}.</span>
-                            <span class="match-content">${lines[i]}</span>
-                         </div>`;
-            } else {
-                // Eğer saat veya lig ismiyse farklı stil ver
-                const isTime = /^\d{2}:\d{2}$/.test(lines[i]);
-                if (isTime) {
-                    html += `<div style="color: #999; font-size: 0.85em; margin-top:5px; padding-left: 40px;">${lines[i]}</div>`;
-                } else {
-                    html += `<div class="league-title">${lines[i]}</div>`;
-                }
-            }
-        }
-
-        resultDiv.innerHTML = html;
     }
 </script>
 
