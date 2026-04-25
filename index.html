@@ -2,1480 +2,221 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Canlı Maç Sonuçları Eşleştirme</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canlı Skor Eşleştirme Tablosu</title>
     <style>
-        body { font-family: sans-serif; background-color: #f4f4f4; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; }
         .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
+        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #2c3e50; color: white; }
+        th { background-color: #3498db; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
-        .score { font-weight: bold; color: #e74c3c; text-align: center; }
-        .ht-score { color: #7f8c8d; font-size: 0.9em; text-align: center; }
-        .no { width: 40px; text-align: center; font-weight: bold; }
+        tr:hover { background-color: #f1f1f1; }
+        .score-box { font-weight: bold; color: #e74c3c; text-align: center; }
+        .iy-box { font-size: 0.85em; color: #7f8c8d; text-align: center; }
+        .index-col { width: 40px; text-align: center; font-weight: bold; background: #ecf0f1; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Maç Sonuçları ve Eşleşmeler</h2>
-    <div id="matchBoard"></div>
+    <table id="matchTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Takımlar</th>
+                <th>Maç Sonucu</th>
+                <th>İlk Yarı</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
 </div>
 
 <script>
-// Kullanıcının sağladığı ham veriler (Örnek maçlar ve sonuçlar)
-const rawMatches = `Honduras Ulusal Lig, Kapanış
-00:00
-CD Victoria
--
-Juticalpa FC
-
-Brezilya Kupası
-01:00
-Bahia BA
--
-Clube DO Remo PA
-
-01:00
-Goias GO
--
-Cruzeiro MG
-
-Bolivya Profesyonel Lig
-01:00
-Real Potosi
--
-Guabira Montero
-
-Arjantin Kupası
-01:00
-Acassuso
--
-Gimnasia
-
-Brezilya Kupası
-01:30
-Santos SP
--
-Coritiba
-
-ABD USL 1.Lig
-01:30
-Sarasota Paradise
--
-Corpus Chri
-
-Meksika U21 Liga MX, Clausura
-01:45
-Club Tijuana de Caliente
--
-Pachuca U21
-
-Ekvador Pro Lig
-02:00
-Barcelona SC
--
-Mushuc Runa
-
-Peru Primera Ligi, Açılış
-02:00
-Cusco FC
--
-FC Cajamarca
-
-Honduras Ulusal Lig, Kapanış
-02:15
-Real CD Espana
--
-Platense FC
-
-Kolombiya Primera A, Kapanış
-02:20
-Indep.Medell
--
-Boyaca Chico FC
-
-ABD Major Lig
-02:30
-Columbus Crew
--
-LA Galaxy
-
-02:30
-Toronto FC
--
-Philadelphia Union
-
-02:30
-New York Red Bulls
--
-DC United
-
-02:30
-New York City
--
-FC Cincinnati
-
-02:30
-Orlando City
--
-Charlotte FC
-
-Brezilya Kupası
-02:30
-Athletic Club Sjdr MG
--
-Internacional
-
-02:30
-Fortaleza CE
--
-Crb Al
-
-ABD Championship
-02:30
-Rhode Island FC
--
-Charleston
-
-ABD Major Lig
-02:45
-Atlanta United
--
-New England Revolution
-
-Bolivya Profesyonel Lig
-03:00
-Blooming
--
-Nacional Potosi
-
-Kosta Rika Primera Lig, Kapanış
-03:00
-Municipal Perez Zeledon
--
-CS Herediano
-
-Arjantin Kupası
-03:15
-Deportivo Moron
--
-CA Ferrocarril Midland
-
-Brezilya Seri B
-03:30
-Cuiaba
--
-Botafogo
-
-ABD Major Lig
-03:30
-FC Dallas
--
-Minnesota United
-
-03:30
-Houston Dynamo
--
-San Diego FC
-
-Brezilya Kupası
-03:30
-Bragantino SP
--
-Mirassol FC SP
-
-03:30
-Flamengo
--
-Vitoria BA
-
-Ekvador Pro Lig
-04:00
-LDU Quito
--
-SD Aucas
-
-Meksika Liga de Expa. MX Kapanış Eleme
-04:00
-CD Mineros De Zacatecas
--
-Atlético Morelia
-
-Meksika Primera Ligi, Kapanış
-04:00
-At. San Luis
--
-Santos Laguna
-
-04:00
-Atlas FC
--
-Tigres
-
-04:00
-Mazatlan
--
-Deportivo Toluca
-
-ABD Major Lig
-04:30
-Real Salt Lake
--
-Inter Miami CF
-
-Kolombiya Primera A, Kapanış
-04:30
-Fortaleza FC
--
-America Cali
-
-Honduras Ulusal Lig, Kapanış
-04:30
-CD Olimpia
--
-CD Marathon
-
-Peru Primera Ligi, Açılış
-04:30
-U. Deportes
--
-Deportivo Garcilaso
-
-ABD Championship
-05:00
-Oakland Roots SC
--
-Las Vegas Li
-
-ABD Major Lig
-05:30
-San Jose Earthquakes
--
-Austin FC
-
-05:30
-Los Angeles FC
--
-Colorado Rapids
-
-Kosta Rika Primera Lig, Kapanış
-05:30
-Deportivo Saprissa
--
-Guadalupe FC
-
-Meksika Liga de Expa. MX Kapanış Eleme
-06:00
-Tampico Madero
--
-Club Atletico La Paz
-
-Meksika Primera Ligi, Kapanış
-06:05
-Necaxa
--
-Guadalajara Chivas
-
-Meksika Primera Ligi, Kapanış
-06:06
-Club Tijuana
--
-CF Pachuca
-
-Endonezya 1. Lig
-11:30
-Persita Tangerang
--
-Bali United FC
-
-11:30
-PSM Makassar
--
-Persik Kediri
-
-Endonezya 1. Lig
-15:00
-Malut United
--
-Persebaya
-
-Malezya Süper Lig
-15:15
-Melaka FC
--
-Sabah
-
-Ukrayna Premier Lig
-15:30
-Zory Luhansk
--
-Shakhtar Donetsk
-
-İzlanda Urvalsdeild
-16:00
-Vestmannaeyjar
--
-KR Reykjavik
-
-Mısır 2nd Division
-16:00
-El Daklyeh
--
-Baladiyyat AL Mehalla
-
-16:00
-Gazl Kafr Eldwar
--
-El Mansurah
-
-16:00
-EL Terasanah
--
-Asyut Petroleum
-
-16:00
-Al Mokawloon
--
-FC Masar
-
-16:00
-Maleyat Kafr El Zayat
--
-Alqana
-
-16:00
-Proxy SC
--
-El Sekka El Hadid
-
-Sırbistan Süper Lig, Şampiyona Turu
-17:00
-Radnicki Nis
--
-Jav Ivanjica
-
-Birleşik Arap Emirlikleri Arap Gulf Ligi
-17:00
-AL Ittihad Kalba
--
-FC Baniyas
-
-17:00
-Sharjah FC
--
-AL Wahda FC
-
-Tunus 1. Lig
-17:00
-Esperance Tunis
--
-ES Zarzis
-
-Iraq U20 COSAFA Şampiyonası Grup C
-17:00
-Duhok FC
--
-Al-Garaf
-
-Hindistan Süper Ligi
-17:00
-Kerala Blasters FC
--
-Odisha FC
-
-Rusya Premier Lig
-17:30
-Akron Tolyatti
--
-FC Dynamo-Makhachkala
-
-Letonya Virsliga
-18:00
-SK Super Nova
--
-FK Liepaja
-
-Mısır Premier League, Relegation Rou
-18:00
-Aswan FC
--
-AL Ittihad
-
-Türkiye Kupası, Elemeler
-18:45
-Samsunspor
--
-Trabzonspor
-
-Danimarka Süper Lig, Şampiyonluk Turu
-19:00
-Nordsjælland
--
-AGF Aarhus
-
-19:00
-Randers
--
-Fredericia
-
-Sırbistan Süper Lig, Şampiyona Turu
-19:00
-FK Napredak Krusevac
--
-FK IMT Novi Beograd
-
-Suudi Arabistan Suudi Profesyonel Ligi
-19:10
-AL Najma
--
-AL Taawoun FC
-
-Slovenya Kupası
-19:30
-NK Bravo
--
-NK Aluminij Kidricevo
-
-Iraq U20 COSAFA Şampiyonası Grup C
-19:30
-Zakho FC
--
-AL Kahraba
-
-19:30
-AL Quwa AL Jawiya
--
-Erbil SC
-
-Hollanda Eredivisie
-19:45
-Go Ahead
--
-AZ Alkmaar
-
-Rusya Premier Lig
-19:45
-Spartak Moskova
--
-Krasnodar
-
-19:45
-Akhmat Grozny
--
-FC Baltika Kaliningrad
-
-Birleşik Arap Emirlikleri Arap Gulf Ligi
-19:45
-AL Bataeh
--
-AL Ain FC
-
-İspanya La Liga
-20:00
-Levante
--
-Sevilla
-
-İsveç Allsvenskan
-20:00
-Malmö
--
-IK Sirius
-
-20:00
-Kalmar
--
-Göteborg
-
-20:00
-Degerfors IF
--
-AIK Solna
-
-20:00
-Gais
--
-Mjallby
-
-İzlanda Urvalsdeild
-20:00
-Thor Akureyr
--
-Fram Rey
-
-Danimarka 1.Lig
-20:00
-Aalborg BK
--
-B93 Kopenhag
-
-Romanya Romania Cup
-20:30
-D. Bükreş
--
-Un. Craiova
-
-Türkiye Kupası, Elemeler
-20:45
-Beşiktaş
--
-Alanyaspor
-
-İspanya La Liga
-21:00
-Vallecano
--
-Espanyol
-
-Danimarka Süper Lig, Şampiyonluk Turu
-21:00
-Sonderjyske
--
-Midtjylland
-
-Portekiz Premier Lig
-21:00
-Casa Pia AC
--
-Braga
-
-Sırbistan Süper Lig, Şampiyona Turu
-21:00
-FK Mladost Lucani
--
-Radnicki
-
-21:00
-Spartak Subotica
--
-Tsc Backa To
-
-Polonya 1. Lig
-21:00
-Wieczysta Krakow
--
-Polonia Bytom
-
-Mısır Premier League, Relegation Rou
-21:00
-El Zamalek
--
-Pyramids FC
-
-21:00
-Ghazl El Mahallah
--
-Petrojet Fc
-
-Suudi Arabistan Suudi Profesyonel Ligi
-21:00
-Damac FC
--
-AL Akhdood
-
-Suudi Arabistan Kral Kupası
-21:00
-Al Hilal
--
-AL Khlood
-
-Belçika Pro Lig
-21:30
-St. Truidense
--
-Anderlecht
-
-Belçika Pro League, Relegation/Promoti
-21:30
-Patro Eisden Maasmechelen
--
-Beerschot
-
-21:30
-Lommel SK
--
-RFC Liege
-
-Almanya Kupası
-21:45
-Stuttgart
--
-Freiburg
-
-İngiltere 2. Lig
-22:00
-Salford City
--
-Bromley
-
-Hollanda Eredivisie
-22:00
-PSV
--
-Zwolle
-
-Bolivya Profesyonel Lig
-22:00
-San Antonio Bulo Bulo
--
-Cdt Real Oruro
-
-İzlanda Urvalsdeild
-22:15
-Valur Reykjavik
--
-Hafnarfjordur
-
-22:15
-Vikingur Reykjavik
--
-Stjarnan Gardabaer
-
-İspanya La Liga
-22:30
-Real Oviedo
--
-Villarreal
-
-Portugal Portekiz Kupası
-22:45
-Torreense
--
-AD Fafe
-
-Peru Primera Ligi, Açılış
-23:00
-Cultural San
--
-CS Cienciano`;
-
-const rawResults = `Honduras Ulusal Lig, Kapanış
-Bitti
-CD Victoria
-2 - 1
-Juticalpa FC
-İ.Y 0 - 0
-Brezilya Kupası
-Bitti
-Goias GO
-2 - 2
-Cruzeiro MG
-İ.Y 1 - 1
-Bitti
-Bahia BA
-1 - 3
-Clube DO Remo PA
-İ.Y 1 - 1
-Bolivya Profesyonel Lig
-Bitti
-Real Potosi
-3 - 0
-Guabira Montero
-İ.Y 2 - 0
-Arjantin Kupası
-Bitti
-Acassuso
-0 - 3
-Gimnasia
-İ.Y 0 - 0
-Brezilya Kupası
-Bitti
-Santos SP
-0 - 0
-Coritiba
-İ.Y 0 - 0
-Amerika 1. Ligi
-Bitti
-Sarasota Paradise
-2 - 1
-Corpus Chri
-İ.Y 1 - 0
-Meksika U21 Liga MX, Clausura
-25'
-Club Tijuana de Caliente
-0 - 0
-Pachuca U21
-İ.Y 0 - 0
-Ekvador Pro Lig
-Bitti
-Barcelona SC
-2 - 1
-Mushuc Runa
-İ.Y 0 - 1
-Peru Primera Ligi, Açılış
-Bitti
-Cusco FC
-1 - 0
-FC Cajamarca
-İ.Y 0 - 0
-Honduras Ulusal Lig, Kapanış
-Bitti
-Real CD Espana
-2 - 0
-Platense FC
-İ.Y 2 - 0
-Kolombiya Primera A, Açılış
-Bitti
-Indep.Medell
-2 - 0
-Boyaca Chico FC
-İ.Y 2 - 0
-ABD Major Lig
-Bitti
-New York Red Bulls
-4 - 4
-DC United
-İ.Y 2 - 1
-Bitti
-Orlando City
-4 - 1
-Charlotte FC
-İ.Y 1 - 1
-Bitti
-Toronto FC
-3 - 3
-Philadelphia Union
-İ.Y 0 - 1
-81'
-Columbus Crew
-2 - 0
-LA Galaxy
-İ.Y 1 - 0
-Bitti
-New York City
-4 - 4
-FC Cincinnati
-İ.Y 2 - 1
-Brezilya Kupası
-Bitti
-Fortaleza CE
-2 - 1
-Crb Al
-İ.Y 1 - 1
-Bitti
-Athletic Club Sjdr MG
-1 - 2
-Internacional
-İ.Y 1 - 1
-Amerika Şampiyonluk Ligi
-Bitti
-Rhode Island FC
-4 - 0
-Charleston
-İ.Y 0 - 0
-ABD Major Lig
-Bitti
-Atlanta United
-1 - 2
-New England Revolution
-İ.Y 1 - 0
-Bolivya Profesyonel Lig
-Bitti
-Blooming
-2 - 1
-Nacional Potosi
-İ.Y 2 - 0
-Kosta Rika Primera Lig, Kapanış
-Bitti
-Municipal Perez Zeledon
-0 - 1
-CS Herediano
-İ.Y 0 - 0
-Arjantin Kupası
-Bitti
-Deportivo Moron
-1 - 2
-CA Ferrocarril Midland
-İ.Y 0 - 1
-Brezilya Seri B
-Bitti
-Cuiaba
-1 - 1
-Botafogo
-İ.Y 0 - 0
-ABD Major Lig
-Bitti
-FC Dallas
-0 - 1
-Minnesota United
-İ.Y 0 - 1
-Bitti
-Houston Dynamo
-1 - 0
-San Diego FC
-İ.Y 1 - 0
-Brezilya Kupası
-Bitti
-Bragantino SP
-1 - 1
-Mirassol FC SP
-İ.Y 1 - 1
-Bitti
-Flamengo
-2 - 1
-Vitoria BA
-İ.Y 1 - 1
-Ekvador Pro Lig
-Bitti
-LDU Quito
-0 - 0
-SD Aucas
-İ.Y 0 - 0
-Meksika Liga de Expa. MX Kapanış Eleme
-Bitti
-CD Mineros De Zacatecas
-3 - 0
-Atlético Morelia
-İ.Y 1 - 0
-Meksika Primera Ligi, Açılış
-Bitti
-At. San Luis
-2 - 0
-Santos Laguna
-İ.Y 0 - 0
-Bitti
-Mazatlan
-4 - 3
-Deportivo Toluca
-İ.Y 0 - 1
-Bitti
-Atlas FC
-0 - 0
-Tigres
-İ.Y 0 - 0
-ABD Major Lig
-Bitti
-Real Salt Lake
-0 - 2
-Inter Miami CF
-İ.Y 0 - 0
-Kolombiya Primera A, Açılış
-Bitti
-Fortaleza FC
-1 - 2
-America Cali
-İ.Y 0 - 1
-Honduras Ulusal Lig, Kapanış
-Bitti
-CD Olimpia
-2 - 1
-CD Marathon
-İ.Y 2 - 1
-Peru Primera Ligi, Açılış
-Bitti
-U. Deportes
-4 - 1
-Deportivo Garcilaso
-İ.Y 2 - 0
-Amerika Şampiyonluk Ligi
-Bitti
-Oakland Roots SC
-4 - 2
-Las Vegas Li
-İ.Y 2 - 0
-ABD Major Lig
-Bitti
-Los Angeles FC
-0 - 0
-Colorado Rapids
-İ.Y 0 - 0
-Bitti
-San Jose Earthquakes
-5 - 1
-Austin FC
-İ.Y 0 - 1
-Kosta Rika Primera Lig, Kapanış
-Bitti
-Deportivo Saprissa
-5 - 0
-Guadalupe FC
-İ.Y 1 - 0
-Meksika Liga de Expa. MX Kapanış Eleme
-Bitti
-Tampico Madero
-2 - 0
-Club Atletico La Paz
-İ.Y 0 - 0
-Meksika Primera Ligi, Açılış
-Bitti
-Club Tijuana
-3 - 1
-CF Pachuca
-İ.Y 2 - 0
-Meksika Primera Ligi, Açılış
-Bitti
-Necaxa
-0 - 0
-Guadalajara Chivas
-İ.Y 0 - 0
-Endonezya 1. Lig
-Bitti
-Persita Tangerang
-0 - 1
-Bali United FC
-İ.Y 0 - 0
-Bitti
-PSM Makassar
-3 - 1
-Persik Kediri
-İ.Y 1 - 0
-Avustralya Victoria Premier League, Women
-Bitti
-Mindil Aces
-0 - 2
-University Azzurri
-İ.Y 0 - 1
-Türkiye 3.Lig
-90'
-Mazıdağı Fosfat Spor
-1 - 1
-Erciyes 38 Futbol SK
-İ.Y 0 - 0
-90'
-Etimesgut Belediyespor
-1 - 0
-Küçükçekmece Sinop SK
-İ.Y 0 - 0
-Azerbaycan 2. Ligi
-Bitti
-Simal
-1 - 0
-Baku SC
-İ.Y 1 - 0
-Bitti
-Difai Agsu
-0 - 4
-Sabayil
-İ.Y 0 - 1
-Endonezya 1. Lig
-Bitti
-Malut United
-0 - 2
-Persebaya
-İ.Y 0 - 0
-Malezya Süper Lig
-Bitti
-Melaka FC
-1 - 0
-Sabah
-İ.Y 0 - 0
-Ukrayna Premier Lig
-Bitti
-Zory Luhansk
-1 - 2
-Shakhtar Donetsk
-İ.Y 0 - 1
-İzlanda Urvalsdeild
-Bitti
-Vestmannaeyjar
-2 - 6
-KR Reykjavik
-İ.Y 0 - 4
-Zambiya Süper Ligi
-Bitti
-Zesco United FC
-1 - 1
-Napsa Stars
-İ.Y 1 - 1
-Mısır 2nd Division
-91'
-El Daklyeh
-0 - 2
-Baladiyyat AL Mehalla
-İ.Y 0 - 0
-Bitti
-Maleyat Kafr El Zayat
-1 - 1
-Alqana
-İ.Y 0 - 1
-Bitti
-Gazl Kafr Eldwar
-1 - 2
-El Mansurah
-İ.Y 1 - 0
-Bitti
-EL Terasanah
-3 - 1
-Asyut Petroleum
-İ.Y 3 - 0
-Bitti
-Al Mokawloon
-0 - 2
-FC Masar
-İ.Y 0 - 1
-90'
-Proxy SC
-4 - 1
-El Sekka El Hadid
-İ.Y 2 - 0
-Irak 2. Ligi
-AL Masafee
-0 - 0
-Karbalaa
-İ.Y 0 - 0
-Bitti
-AL Jaish
-1 - 1
-AL Hussein
-İ.Y 0 - 0
-Bitti
-Kadhimiya Sports Club
-2 - 1
-Gas Alshimal
-İ.Y 0 - 1
-Türkiye 3.Lig
-Bitti
-1923 Mustafakemalpaşa SK
-2 - 3
-Çorluspor 1947
-İ.Y 0 - 2
-Sırbistan Süper Lig, Şampiyona Turu
-Bitti
-Radnicki Nis
-3 - 2
-Jav Ivanjica
-İ.Y 2 - 0
-Birleşik Arap Emirlikleri Arap Gulf Ligi
-Bitti
-Sharjah FC
-0 - 2
-AL Wahda FC
-İ.Y 0 - 1
-Bitti
-AL Ittihad Kalba
-1 - 2
-FC Baniyas
-İ.Y 1 - 1
-Tunus 1. Lig
-Bitti
-Esperance Tunis
-2 - 2
-ES Zarzis
-İ.Y 2 - 2
-Özbekistan PFL
-Bitti
-FC Nasaf
-2 - 3
-Lokomotiv Taşkent
-İ.Y 1 - 1
-Bitti
-PFK Navbahor Namangan
-1 - 1
-PFC Sogdiana
-İ.Y 0 - 0
-Irak 1. Ligi
-Bitti
-Duhok FC
-1 - 1
-Al-Garaf
-İ.Y 1 - 1
-Hindistan Süper Ligi
-Bitti
-Kerala Blasters FC
-2 - 1
-Odisha FC
-İ.Y 1 - 1
-Romanya Liga 2, Seria 1, Relegation Ro
-Bitti
-FC Bihor Oradea
-3 - 2
-Sepsi Os Sf
-İ.Y 2 - 0
-Rusya Premier Lig
-Bitti
-Akron Tolyatti
-1 - 1
-FC Dynamo-Makhachkala
-İ.Y 1 - 0
-Seychelles Premier League
-Bitti
-St Michel United
-0 - 2
-Saint Louis Suns Utd
-İ.Y 0 - 0
-Letonya Virsliga
-Bitti
-SK Super Nova
-1 - 2
-FK Liepaja
-İ.Y 0 - 2
-Estonya 2. Ligi
-Bitti
-FCI Levadia Tallinn U21
-3 - 2
-Tallinna Kal
-İ.Y 1 - 1
-Bitti
-Tallinna FC Flora U21
-3 - 2
-FC Elva
-İ.Y 1 - 2
-Mısır Premier League, Relegation Rou
-Bitti
-Aswan FC
-0 - 0
-AL Ittihad
-İ.Y 0 - 0
-İspanya Amatör Tercera Federacion, Group 15
-Bitti
-CD Atletico Mansilles
-1 - 0
-SD Almazan
-İ.Y 0 - 0
-Özbekistan PFL
-Bitti
-PFK Dinamo Samarqand
-2 - 2
-FK Agmk
-İ.Y 2 - 0
-Ziraat Türkiye Kupası
-PENMS
-Samsunspor
-0 - 0
-Trabzonspor
-İ.Y 0 - 0
-Danimarka Süper Lig, Şampiyonluk Turu
-Bitti
-Randers
-2 - 2
-Fredericia
-İ.Y 1 - 2
-Bitti
-Nordsjælland
-1 - 1
-AGF Aarhus
-İ.Y 0 - 1
-Sırbistan Süper Lig, Şampiyona Turu
-Bitti
-FK Napredak Krusevac
-0 - 1
-FK IMT Novi Beograd
-İ.Y 0 - 0
-Estonya 2. Ligi
-Bitti
-Viimsi JK
-2 - 0
-Tartu
-İ.Y 1 - 0
-Bitti
-Maardu
-1 - 1
-FC Tallinn
-İ.Y 0 - 0
-Ürdün Pro Ligi
-Bitti
-AL Sarhan
-0 - 4
-AL Hussein Irbid
-İ.Y 0 - 2
-Suudi Arabistan Suudi Profesyonel Ligi
-Bitti
-AL Najma
-1 - 2
-AL Taawoun FC
-İ.Y 0 - 1
-Slovenya Kupası
-Bitti
-NK Bravo
-0 - 1
-NK Aluminij Kidricevo
-İ.Y 0 - 0
-Irak 1. Ligi
-Bitti
-AL Quwa AL Jawiya
-1 - 1
-Erbil SC
-İ.Y 0 - 1
-Bitti
-Zakho FC
-2 - 1
-AL Kahraba
-İ.Y 1 - 1
-Hollanda Eredivisie
-Bitti
-Go Ahead
-0 - 0
-AZ Alkmaar
-İ.Y 0 - 0
-Rusya Premier Lig
-Bitti
-Spartak Moskova
-1 - 2
-Krasnodar
-İ.Y 1 - 1
-Bitti
-Akhmat Grozny
-1 - 1
-FC Baltika Kaliningrad
-İ.Y 0 - 0
-Birleşik Arap Emirlikleri Arap Gulf Ligi
-Bitti
-AL Bataeh
-0 - 2
-AL Ain FC
-İ.Y 0 - 1
-İspanya La Liga
-Bitti
-Levante
-2 - 0
-Sevilla
-İ.Y 1 - 0
-İsveç Allsvenskan
-Bitti
-Kalmar
-1 - 1
-Göteborg
-İ.Y 1 - 1
-Bitti
-Degerfors IF
-2 - 1
-AIK Solna
-İ.Y 1 - 1
-Bitti
-Gais
-0 - 0
-Mjallby
-İ.Y 0 - 0
-Bitti
-Malmö
-2 - 3
-IK Sirius
-İ.Y 0 - 1
-İzlanda Urvalsdeild
-Bitti
-Thor Akureyr
-1 - 0
-Fram Rey
-İ.Y 0 - 0
-Türkiye 3.Lig
-Bitti
-Malatya Yeşilyurt SK
-3 - 1
-Silifke Belediyespor
-İ.Y 2 - 0
-Danimarka 1.Lig
-Bitti
-Aalborg BK
-3 - 2
-B93 Kopenhag
-İ.Y 1 - 1
-Romanya Kupası
-PENMS
-D. Bükreş
-2 - 5
-Un. Craiova
-İ.Y 0 - 0
-Ziraat Türkiye Kupası
-Bitti
-Beşiktaş
-3 - 0
-Alanyaspor
-İ.Y 1 - 0
-İspanya La Liga
-Bitti
-Vallecano
-1 - 0
-Espanyol
-İ.Y 0 - 0
-Danimarka Süper Lig, Şampiyonluk Turu
-Bitti
-Sonderjyske
-1 - 2
-Midtjylland
-İ.Y 1 - 1
-Portekiz Premier Lig
-Bitti
-Casa Pia AC
-0 - 1
-Braga
-İ.Y 0 - 1
-Sırbistan Süper Lig, Şampiyona Turu
-Bitti
-FK Mladost Lucani
-0 - 0
-Radnicki
-İ.Y 0 - 0
-Bitti
-Spartak Subotica
-1 - 4
-Tsc Backa To
-İ.Y 1 - 1
-Polonya 1. Lig
-Bitti
-Wieczysta Krakow
-4 - 3
-Polonia Bytom
-İ.Y 0 - 2
-Mısır Premier League, Relegation Rou
-Bitti
-Ghazl El Mahallah
-1 - 1
-Petrojet Fc
-İ.Y 0 - 1
-Bitti
-El Zamalek
-1 - 0
-Pyramids FC
-İ.Y 0 - 0
-Suudi Arabistan Suudi Profesyonel Ligi
-Bitti
-Damac FC
-2 - 0
-AL Akhdood
-İ.Y 1 - 0
-Suudi Arabistan Kral Kupası
-ERT
-Al Hilal
--
-AL Khlood
-İ.Y 0 - 0
-Belçika Pro League, Relegation/Promoti
-Bitti
-Lommel SK
-3 - 0
-RFC Liege
-İ.Y 2 - 0
-Bitti
-Patro Eisden Maasmechelen
-1 - 1
-Beerschot
-İ.Y 1 - 0
-Almanya Federasyon Kupası
-UZMS
-Stuttgart
-2 - 1
-Freiburg
-İ.Y 0 - 1
-Belçika Pro Lig
-Bitti
-St. Truidense
-2 - 0
-Anderlecht
-İ.Y 0 - 0
-İngiltere 2. Lig
-Bitti
-Salford City
-2 - 0
-Bromley
-İ.Y 0 - 0
-Hollanda Eredivisie
-Bitti
-PSV
-6 - 1
-Zwolle
-İ.Y 1 - 0
-Bolivya Profesyonel Lig
-Bitti
-San Antonio Bulo Bulo
-2 - 1
-Cdt Real Oruro
-İ.Y 0 - 1
-İzlanda Urvalsdeild
-Bitti
-Vikingur Reykjavik
-3 - 2
-Stjarnan Gardabaer
-İ.Y 1 - 1
-Bitti
-Valur Reykjavik
-0 - 3
-Hafnarfjordur
-İ.Y 0 - 3
-İspanya La Liga
-Bitti
-Real Oviedo
-1 - 1
-Villarreal
-İ.Y 0 - 1
-Portekiz Kupası
-Bitti
-Torreense
-2 - 0
-AD Fafe
-İ.Y 0 - 0
-Peru Primera Ligi, Açılış
-Bitti
-Cultural San
-1 - 0
-CS Cienciano
-İ.Y 0 - 0`;
-
-function processAndDisplay() {
-    // 1. Maç Listesini Hazırla (Numaralandırma alttan başlar)
-    const matchLines = rawMatches.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    let matchPairs = [];
+/**
+ * Bu yapı, iki farklı kaynaktan gelen verileri (Maç Listesi ve Skor Verisi) 
+ * takım isimleri üzerinden birebir eşleştirerek tabloyu oluşturur.
+ */
+
+// 1. Kaynak: Gelecek/Örnek Maç Listesi (Sıralama korunur)
+const matchSchedule = [
+    "CD Victoria - Juticalpa FC", "Bahia BA - Clube DO Remo PA", "Goias GO - Cruzeiro MG",
+    "Real Potosi - Guabira Montero", "Acassuso - Gimnasia", "Santos SP - Coritiba",
+    "Sarasota Paradise - Corpus Chri", "Club Tijuana de Caliente - Pachuca U21",
+    "Barcelona SC - Mushuc Runa", "Cusco FC - FC Cajamarca", "Real CD Espana - Platense FC",
+    "Indep.Medell - Boyaca Chico FC", "Columbus Crew - LA Galaxy", "Toronto FC - Philadelphia Union",
+    "New York Red Bulls - DC United", "New York City - FC Cincinnati", "Orlando City - Charlotte FC",
+    "Athletic Club Sjdr MG - Internacional", "Fortaleza CE - Crb Al", "Rhode Island FC - Charleston",
+    "Atlanta United - New England Revolution", "Blooming - Nacional Potosi",
+    "Municipal Perez Zeledon - CS Herediano", "Deportivo Moron - CA Ferrocarril Midland",
+    "Cuiaba - Botafogo", "FC Dallas - Minnesota United", "Houston Dynamo - San Diego FC",
+    "Bragantino SP - Mirassol FC SP", "Flamengo - Vitoria BA", "LDU Quito - SD Aucas",
+    "CD Mineros De Zacatecas - Atlético Morelia", "At. San Luis - Santos Laguna",
+    "Atlas FC - Tigres", "Mazatlan - Deportivo Toluca", "Real Salt Lake - Inter Miami CF",
+    "Fortaleza FC - America Cali", "CD Olimpia - CD Marathon", "U. Deportes - Deportivo Garcilaso",
+    "Oakland Roots SC - Las Vegas Li", "San Jose Earthquakes - Austin FC",
+    "Los Angeles FC - Colorado Rapids", "Deportivo Saprissa - Guadalupe FC",
+    "Tampico Madero - Club Atletico La Paz", "Necaxa - Guadalajara Chivas",
+    "Club Tijuana - CF Pachuca", "Persita Tangerang - Bali United FC", "PSM Makassar - Persik Kediri",
+    "Malut United - Persebaya", "Melaka FC - Sabah", "Zory Luhansk - Shakhtar Donetsk",
+    "Vestmannaeyjar - KR Reykjavik", "El Daklyeh - Baladiyyat AL Mehalla", "Gazl Kafr Eldwar - El Mansurah",
+    "EL Terasanah - Asyut Petroleum", "Al Mokawloon - FC Masar", "Maleyat Kafr El Zayat - Alqana",
+    "Proxy SC - El Sekka El Hadid", "Radnicki Nis - Jav Ivanjica", "AL Ittihad Kalba - FC Baniyas",
+    "Sharjah FC - AL Wahda FC", "Esperance Tunis - ES Zarzis", "Duhok FC - Al-Garaf",
+    "Kerala Blasters FC - Odisha FC", "Akron Tolyatti - FC Dynamo-Makhachkala",
+    "SK Super Nova - FK Liepaja", "Aswan FC - AL Ittihad", "Samsunspor - Trabzonspor",
+    "Nordsjælland - AGF Aarhus", "Randers - Fredericia", "FK Napredak Krusevac - FK IMT Novi Beograd",
+    "AL Najma - AL Taawoun FC", "NK Bravo - NK Aluminij Kidricevo", "Zakho FC - AL Kahraba",
+    "AL Quwa AL Jawiya - Erbil SC", "Go Ahead - AZ Alkmaar", "Spartak Moskova - Krasnodar",
+    "Akhmat Grozny - FC Baltika Kaliningrad", "AL Bataeh - AL Ain FC", "Levante - Sevilla",
+    "Malmö - IK Sirius", "Kalmar - Göteborg", "Degerfors IF - AIK Solna", "Gais - Mjallby",
+    "Thor Akureyr - Fram Rey", "Aalborg BK - B93 Kopenhag", "D. Bükreş - Un. Craiova",
+    "Beşiktaş - Alanyaspor", "Vallecano - Espanyol", "Sonderjyske - Midtjylland",
+    "Casa Pia AC - Braga", "FK Mladost Lucani - Radnicki", "Spartak Subotica - Tsc Backa To",
+    "Wieczysta Krakow - Polonia Bytom", "El Zamalek - Pyramids FC", "Ghazl El Mahallah - Petrojet Fc",
+    "Damac FC - AL Akhdood", "Al Hilal - AL Khlood", "St. Truidense - Anderlecht",
+    "Patro Eisden Maasmechelen - Beerschot", "Lommel SK - RFC Liege", "Stuttgart - Freiburg",
+    "Salford City - Bromley", "PSV - Zwolle", "San Antonio Bulo Bulo - Cdt Real Oruro",
+    "Valur Reykjavik - Hafnarfjordur", "Vikingur Reykjavik - Stjarnan Gardabaer",
+    "Real Oviedo - Villarreal", "Torreense - AD Fafe", "Cultural San - CS Cienciano"
+];
+
+// 2. Kaynak: Gelen Skor Verileri (Ham veri havuzu)
+const scoreData = [
+    { teams: "CD Victoria - Juticalpa FC", score: "2 - 1", iy: "0 - 0" },
+    { teams: "Goias GO - Cruzeiro MG", score: "2 - 2", iy: "1 - 1" },
+    { teams: "Bahia BA - Clube DO Remo PA", score: "1 - 3", iy: "1 - 1" },
+    { teams: "Real Potosi - Guabira Montero", score: "3 - 0", iy: "2 - 0" },
+    { teams: "Acassuso - Gimnasia", score: "0 - 3", iy: "0 - 0" },
+    { teams: "Santos SP - Coritiba", score: "0 - 0", iy: "0 - 0" },
+    { teams: "Sarasota Paradise - Corpus Chri", score: "2 - 1", iy: "1 - 0" },
+    { teams: "Barcelona SC - Mushuc Runa", score: "2 - 1", iy: "0 - 1" },
+    { teams: "Cusco FC - FC Cajamarca", score: "1 - 0", iy: "0 - 0" },
+    { teams: "Real CD Espana - Platense FC", score: "2 - 0", iy: "2 - 0" },
+    { teams: "Indep.Medell - Boyaca Chico FC", score: "2 - 0", iy: "2 - 0" },
+    { teams: "New York Red Bulls - DC United", score: "4 - 4", iy: "2 - 1" },
+    { teams: "Orlando City - Charlotte FC", score: "4 - 1", iy: "1 - 1" },
+    { teams: "Toronto FC - Philadelphia Union", score: "3 - 3", iy: "0 - 1" },
+    { teams: "Columbus Crew - LA Galaxy", score: "2 - 0", iy: "1 - 0" },
+    { teams: "New York City - FC Cincinnati", score: "4 - 4", iy: "2 - 1" },
+    { teams: "Fortaleza CE - Crb Al", score: "2 - 1", iy: "1 - 1" },
+    { teams: "Athletic Club Sjdr MG - Internacional", score: "1 - 2", iy: "1 - 1" },
+    { teams: "Rhode Island FC - Charleston", score: "4 - 0", iy: "0 - 0" },
+    { teams: "Atlanta United - New England Revolution", score: "1 - 2", iy: "1 - 0" },
+    { teams: "Blooming - Nacional Potosi", score: "2 - 1", iy: "2 - 0" },
+    { teams: "Municipal Perez Zeledon - CS Herediano", score: "0 - 1", iy: "0 - 0" },
+    { teams: "Deportivo Moron - CA Ferrocarril Midland", score: "1 - 2", iy: "0 - 1" },
+    { teams: "Cuiaba - Botafogo", score: "1 - 1", iy: "0 - 0" },
+    { teams: "FC Dallas - Minnesota United", score: "0 - 1", iy: "0 - 1" },
+    { teams: "Houston Dynamo - San Diego FC", score: "1 - 0", iy: "1 - 0" },
+    { teams: "Bragantino SP - Mirassol FC SP", score: "1 - 1", iy: "1 - 1" },
+    { teams: "Flamengo - Vitoria BA", score: "2 - 1", iy: "1 - 1" },
+    { teams: "LDU Quito - SD Aucas", score: "0 - 0", iy: "0 - 0" },
+    { teams: "CD Mineros De Zacatecas - Atlético Morelia", score: "3 - 0", iy: "1 - 0" },
+    { teams: "At. San Luis - Santos Laguna", score: "2 - 0", iy: "0 - 0" },
+    { teams: "Mazatlan - Deportivo Toluca", score: "4 - 3", iy: "0 - 1" },
+    { teams: "Atlas FC - Tigres", score: "0 - 0", iy: "0 - 0" },
+    { teams: "Real Salt Lake - Inter Miami CF", score: "0 - 2", iy: "0 - 0" },
+    { teams: "Fortaleza FC - America Cali", score: "1 - 2", iy: "0 - 1" },
+    { teams: "CD Olimpia - CD Marathon", score: "2 - 1", iy: "2 - 1" },
+    { teams: "U. Deportes - Deportivo Garcilaso", score: "4 - 1", iy: "2 - 0" },
+    { teams: "Oakland Roots SC - Las Vegas Li", score: "4 - 2", iy: "2 - 0" },
+    { teams: "Los Angeles FC - Colorado Rapids", score: "0 - 0", iy: "0 - 0" },
+    { teams: "San Jose Earthquakes - Austin FC", score: "5 - 1", iy: "0 - 1" },
+    { teams: "Deportivo Saprissa - Guadalupe FC", score: "5 - 0", iy: "1 - 0" },
+    { teams: "Tampico Madero - Club Atletico La Paz", score: "2 - 0", iy: "0 - 0" },
+    { teams: "Club Tijuana - CF Pachuca", score: "3 - 1", iy: "2 - 0" },
+    { teams: "Necaxa - Guadalajara Chivas", score: "0 - 0", iy: "0 - 0" },
+    { teams: "Persita Tangerang - Bali United FC", score: "0 - 1", iy: "0 - 0" },
+    { teams: "PSM Makassar - Persik Kediri", score: "3 - 1", iy: "1 - 0" },
+    { teams: "Malut United - Persebaya", score: "0 - 2", iy: "0 - 0" },
+    { teams: "Melaka FC - Sabah", score: "1 - 0", iy: "0 - 0" },
+    { teams: "Zory Luhansk - Shakhtar Donetsk", score: "1 - 2", iy: "0 - 1" },
+    { teams: "Vestmannaeyjar - KR Reykjavik", score: "2 - 6", iy: "0 - 4" },
+    { teams: "El Daklyeh - Baladiyyat AL Mehalla", score: "0 - 2", iy: "0 - 0" },
+    { teams: "Maleyat Kafr El Zayat - Alqana", score: "1 - 1", iy: "0 - 1" },
+    { teams: "Gazl Kafr Eldwar - El Mansurah", score: "1 - 2", iy: "1 - 0" },
+    { teams: "EL Terasanah - Asyut Petroleum", score: "3 - 1", iy: "3 - 0" },
+    { teams: "Al Mokawloon - FC Masar", score: "0 - 2", iy: "0 - 1" },
+    { teams: "Proxy SC - El Sekka El Hadid", score: "4 - 1", iy: "2 - 0" },
+    { teams: "Radnicki Nis - Jav Ivanjica", score: "3 - 2", iy: "2 - 0" },
+    { teams: "Sharjah FC - AL Wahda FC", score: "0 - 2", iy: "0 - 1" },
+    { teams: "AL Ittihad Kalba - FC Baniyas", score: "1 - 2", iy: "1 - 1" },
+    { teams: "Esperance Tunis - ES Zarzis", score: "2 - 2", iy: "2 - 2" },
+    { teams: "Duhok FC - Al-Garaf", score: "1 - 1", iy: "1 - 1" },
+    { teams: "Kerala Blasters FC - Odisha FC", score: "2 - 1", iy: "1 - 1" },
+    { teams: "Akron Tolyatti - FC Dynamo-Makhachkala", score: "1 - 1", iy: "1 - 0" },
+    { teams: "SK Super Nova - FK Liepaja", score: "1 - 2", iy: "0 - 2" },
+    { teams: "Aswan FC - AL Ittihad", score: "0 - 0", iy: "0 - 0" },
+    { teams: "Samsunspor - Trabzonspor", score: "0 - 0", iy: "0 - 0" },
+    { teams: "Randers - Fredericia", score: "2 - 2", iy: "1 - 2" },
+    { teams: "Nordsjælland - AGF Aarhus", score: "1 - 1", iy: "0 - 1" },
+    { teams: "FK Napredak Krusevac - FK IMT Novi Beograd", score: "0 - 1", iy: "0 - 0" },
+    { teams: "AL Najma - AL Taawoun FC", score: "1 - 2", iy: "0 - 1" },
+    { teams: "NK Bravo - NK Aluminij Kidricevo", score: "0 - 1", iy: "0 - 0" },
+    { teams: "AL Quwa AL Jawiya - Erbil SC", score: "1 - 1", iy: "0 - 1" },
+    { teams: "Zakho FC - AL Kahraba", score: "2 - 1", iy: "1 - 1" },
+    { teams: "Go Ahead - AZ Alkmaar", score: "0 - 0", iy: "0 - 0" },
+    { teams: "Spartak Moskova - Krasnodar", score: "1 - 2", iy: "1 - 1" },
+    { teams: "Akhmat Grozny - FC Baltika Kaliningrad", score: "1 - 1", iy: "0 - 0" },
+    { teams: "AL Bataeh - AL Ain FC", score: "0 - 2", iy: "0 - 1" },
+    { teams: "Levante - Sevilla", score: "2 - 0", iy: "1 - 0" },
+    { teams: "Kalmar - Göteborg", score: "1 - 1", iy: "1 - 1" },
+    { teams: "Degerfors IF - AIK Solna", score: "2 - 1", iy: "1 - 1" },
+    { teams: "Gais - Mjallby", score: "0 - 0", iy: "0 - 0" },
+    { teams: "Malmö - IK Sirius", score: "2 - 3", iy: "0 - 1" },
+    { teams: "Thor Akureyr - Fram Rey", score: "1 - 0", iy: "0 - 0" },
+    { teams: "Aalborg BK - B93 Kopenhag", score: "3 - 2", iy: "1 - 1" },
+    { teams: "D. Bükreş - Un. Craiova", score: "2 - 5", iy: "0 - 0" },
+    { teams: "Beşiktaş - Alanyaspor", score: "3 - 0", iy: "1 - 0" },
+    { teams: "Vallecano - Espanyol", score: "1 - 0", iy: "0 - 0" },
+    { teams: "Sonderjyske - Midtjylland", score: "1 - 2", iy: "1 - 1" },
+    { teams: "Casa Pia AC - Braga", score: "0 - 1", iy: "0 - 1" },
+    { teams: "FK Mladost Lucani - Radnicki", score: "0 - 0", iy: "0 - 0" },
+    { teams: "Spartak Subotica - Tsc Backa To", score: "1 - 4", iy: "1 - 1" },
+    { teams: "Wieczysta Krakow - Polonia Bytom", score: "4 - 3", iy: "0 - 2" },
+    { teams: "Ghazl El Mahallah - Petrojet Fc", score: "1 - 1", iy: "0 - 1" },
+    { teams: "El Zamalek - Pyramids FC", score: "1 - 0", iy: "0 - 0" },
+    { teams: "Damac FC - AL Akhdood", score: "2 - 0", iy: "1 - 0" },
+    { teams: "Al Hilal - AL Khlood", score: "-", iy: "0 - 0" },
+    { teams: "Lommel SK - RFC Liege", score: "3 - 0", iy: "2 - 0" },
+    { teams: "Patro Eisden Maasmechelen - Beerschot", score: "1 - 1", iy: "1 - 0" },
+    { teams: "Stuttgart - Freiburg", score: "2 - 1", iy: "0 - 1" },
+    { teams: "St. Truidense - Anderlecht", score: "2 - 0", iy: "0 - 0" },
+    { teams: "Salford City - Bromley", score: "2 - 0", iy: "0 - 0" },
+    { teams: "PSV - Zwolle", score: "6 - 1", iy: "1 - 0" },
+    { teams: "San Antonio Bulo Bulo - Cdt Real Oruro", score: "2 - 1", iy: "0 - 1" },
+    { teams: "Vikingur Reykjavik - Stjarnan Gardabaer", score: "3 - 2", iy: "1 - 1" },
+    { teams: "Valur Reykjavik - Hafnarfjordur", score: "0 - 3", iy: "0 - 3" },
+    { teams: "Real Oviedo - Villarreal", score: "1 - 1", iy: "0 - 1" },
+    { teams: "Torreense - AD Fafe", score: "2 - 0", iy: "0 - 0" },
+    { teams: "Cultural San - CS Cienciano", score: "1 - 0", iy: "0 - 0" }
+];
+
+const tableBody = document.querySelector("#matchTable tbody");
+
+// Eşleştirme ve Tablo Oluşturma (Alttan yukarı 1'den başlayarak numaralandırma)
+// Listeyi ters çevirip (reverse) 1'den başlatıyoruz
+const totalMatches = matchSchedule.length;
+
+matchSchedule.slice().reverse().forEach((matchName, index) => {
+    // Skor verisi içinde bu maçı ara
+    const result = scoreData.find(m => m.teams === matchName) || { score: "-", iy: "-" };
     
-    for (let i = 0; i < matchLines.length; i++) {
-        if (matchLines[i] === '-') {
-            matchPairs.push({
-                home: matchLines[i-1],
-                away: matchLines[i+1]
-            });
-        }
-    }
-
-    // 2. Sonuçları Parçala ve Map'le
-    const resultLines = rawResults.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    let resultMap = {};
-
-    for (let i = 0; i < resultLines.length; i++) {
-        // Skor satırını bul (örneğin "2 - 1")
-        if (resultLines[i].includes(' - ') && !resultLines[i].includes(':') && /[0-9]/.test(resultLines[i])) {
-            let homeTeam = resultLines[i-1];
-            let awayTeam = resultLines[i+1];
-            let fullScore = resultLines[i];
-            let htScore = "";
-            
-            // İlk yarı skorunu bul (İ.Y ile başlayan bir sonraki satır mı?)
-            if (resultLines[i+2] && resultLines[i+2].startsWith('İ.Y')) {
-                htScore = resultLines[i+2];
-            }
-            
-            const key = (homeTeam + awayTeam).replace(/\s/g, '').toLowerCase();
-            resultMap[key] = { fullScore, htScore };
-        }
-    }
-
-    // 3. HTML Tablosunu Oluştur
-    let html = `<table>
-                <thead>
-                    <tr>
-                        <th class="no">#</th>
-                        <th>Ev Sahibi</th>
-                        <th>Misafir</th>
-                        <th>MS</th>
-                        <th>İY</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-    // Alttan üste doğru numaralandırma ve eşleşme
-    const total = matchPairs.length;
-    matchPairs.forEach((pair, index) => {
-        const matchKey = (pair.home + pair.away).replace(/\s/g, '').toLowerCase();
-        const scoreData = resultMap[matchKey] || { fullScore: "-", htScore: "-" };
-        
-        // 1'den başlayıp üste doğru numaralandır (İstediğiniz: Alttan 1 ile başlamak)
-        // Eğer listenin en başındaki maça en yüksek numarayı vermek istiyorsanız:
-        const rowNumber = total - index; 
-
-        html += `<tr>
-                    <td class="no">${rowNumber}</td>
-                    <td>${pair.home}</td>
-                    <td>${pair.away}</td>
-                    <td class="score">${scoreData.fullScore}</td>
-                    <td class="ht-score">${scoreData.htScore}</td>
-                </tr>`;
-    });
-
-    html += `</tbody></table>`;
-    document.getElementById('matchBoard').innerHTML = html;
-}
-
-// Sayfa yüklendiğinde çalıştır
-window.onload = processAndDisplay;
+    const row = `
+        <tr>
+            <td class="index-col">${index + 1}</td>
+            <td>${matchName}</td>
+            <td class="score-box">${result.score}</td>
+            <td class="iy-box">İ.Y ${result.iy}</td>
+        </tr>
+    `;
+    tableBody.innerHTML += row;
+});
 </script>
 
 </body>
