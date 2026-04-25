@@ -3,15 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profesyonel Fikstür Eşleştirici</title>
+    <title>Maç Sonucu Eşleştirici Pro</title>
     <style>
         :root {
             --primary: #2563eb;
-            --secondary: #64748b;
             --bg: #f8fafc;
             --card: #ffffff;
             --text: #1e293b;
-            --accent: #10b981;
         }
 
         body {
@@ -20,33 +18,38 @@
             color: var(--text);
             margin: 0;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .container {
+            width: 100%;
             max-width: 1000px;
-            margin: 0 auto;
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+        h2 { text-align: center; color: var(--primary); }
 
-        .input-sections {
+        .input-group {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 20px;
         }
 
         textarea {
             width: 100%;
             height: 200px;
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
-            font-size: 14px;
             resize: vertical;
+            font-size: 14px;
+            box-sizing: border-box;
         }
 
         button {
@@ -56,188 +59,129 @@
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: opacity 0.2s;
+            font-size: 16px;
         }
 
-        button:hover {
-            background-color: #1d4ed8;
-        }
+        button:hover { opacity: 0.9; }
 
-        .results-table {
-            width: 100%;
-            background: var(--card);
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            margin-top: 30px;
-            border-collapse: collapse;
-        }
-
-        .results-table th {
-            background-color: var(--primary);
-            color: white;
-            padding: 12px;
-            text-align: left;
-        }
-
-        .results-table td {
-            padding: 12px;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 14px;
-        }
-
-        .results-table tr:nth-child(even) {
-            background-color: #f1f5f9;
-        }
-
-        .score-badge {
-            background: #e0f2fe;
-            color: #0369a1;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        .iy-badge {
-            font-size: 11px;
-            color: var(--secondary);
-            margin-left: 5px;
+        #resultArea {
+            margin-top: 25px;
+            white-space: pre-wrap;
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--primary);
+            font-family: monospace;
+            line-height: 1.6;
         }
 
         @media (max-width: 768px) {
-            .input-sections {
-                grid-template-columns: 1fr;
-            }
-            .results-table {
-                display: block;
-                overflow-x: auto;
-            }
+            .input-group { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header>
-        <h1>Fikstür & Sonuç Eşleştirici</h1>
-        <p>Programı ve sonuçları yapıştırın, anında eşleştirin.</p>
-    </header>
-
-    <div class="input-sections">
+    <h2>Fikstür & Sonuç Birleştirici</h2>
+    
+    <div class="input-group">
         <div>
-            <label><strong>Fikstür Programı</strong></label>
+            <label>1. Fikstür Programı:</label>
             <textarea id="fixtureInput" placeholder="Fikstür listesini buraya yapıştırın..."></textarea>
         </div>
         <div>
-            <label><strong>Maç Sonuçları</strong></label>
-            <textarea id="resultsInput" placeholder="Sonuçları buraya yapıştırın..."></textarea>
+            <label>2. Maç Sonuçları:</label>
+            <textarea id="resultsInput" placeholder="Sonuç listesini buraya yapıştırın..."></textarea>
         </div>
     </div>
 
-    <button onclick="processData()">HIZLI EŞLEŞTİR VE LİSTELE</button>
+    <button onclick="processData()">EŞLEŞTİR VE LİSTELE</button>
 
-    <table class="results-table" id="outputTable" style="display:none;">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Lig / Saat</th>
-                <th>Maç</th>
-                <th>Sonuç (MS / İY)</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
+    <div id="resultArea">Sonuçlar burada görünecek...</div>
 </div>
 
 <script>
 function processData() {
     const fixtureText = document.getElementById('fixtureInput').value;
     const resultsText = document.getElementById('resultsInput').value;
-    const tableBody = document.getElementById('tableBody');
-    const outputTable = document.getElementById('outputTable');
+    const resultArea = document.getElementById('resultArea');
+
+    if (!fixtureText || !resultsText) {
+        alert("Lütfen her iki alanı da doldurun!");
+        return;
+    }
+
+    // 1. Fikstür Ayrıştırma
+    // Format: Takım A - Takım B içeren satırları bulur
+    const fixtureLines = fixtureText.split('\n').filter(l => l.trim() !== "");
+    let fixtures = [];
     
-    tableBody.innerHTML = '';
-    
-    // 1. Sonuçları haritala (Takım isimlerini anahtar yap)
-    const resultsMap = {};
-    const resultBlocks = resultsText.split(/(?=Bitti|PENMS|UZMS|ERT|\d{2}')/);
-
-    resultBlocks.forEach(block => {
-        const lines = block.split('\n').map(l => l.trim()).filter(l => l);
-        if (lines.length >= 3) {
-            // Skor ve Takım tespiti
-            const scoreLine = lines.find(l => l.includes('-') && /\d/.test(l));
-            const iyLine = lines.find(l => l.includes('İ.Y'));
-            
-            // Takımları bul (Skordan önceki ve sonraki satırlar genelde takımdır)
-            let homeTeam = lines[1];
-            let awayTeam = lines[3];
-
-            if(homeTeam && awayTeam && scoreLine) {
-                const key = (homeTeam + awayTeam).replace(/\s+/g, '').toLowerCase();
-                resultsMap[key] = {
-                    score: scoreLine,
-                    iy: iyLine || ''
-                };
-            }
-        }
-    });
-
-    // 2. Fikstürü işle
-    const fixtureLines = fixtureText.split('\n').map(l => l.trim()).filter(l => l);
-    let currentLeague = "";
-    let matchCount = 0;
-    let matches = [];
-
     for (let i = 0; i < fixtureLines.length; i++) {
-        // Eğer satırda "-" varsa bu bir maç satırıdır
-        if (fixtureLines[i] === "-") {
-            matchCount++;
-            const home = fixtureLines[i-1];
-            const away = fixtureLines[i+1];
-            const time = fixtureLines[i-2] || "";
+        if (fixtureLines[i].includes('-')) {
+            let home = fixtureLines[i-1] ? fixtureLines[i-1].trim() : "Bilinmiyor";
+            let away = fixtureLines[i+1] ? fixtureLines[i+1].trim() : "Bilinmiyor";
             
-            // Bir önceki lig başlığını bulmaya çalış
-            let league = "Belirtilmemiş";
-            for(let j = i-3; j >= 0; j--) {
-                if(!fixtureLines[j].includes(':') && fixtureLines[j].length > 5) {
-                    league = fixtureLines[j];
-                    break;
-                }
-            }
+            // Eğer saat veya lig bilgisi girmişse onları temizle/atla (Basit temizlik)
+            if(home.match(/^\d{2}:\d{2}$/)) home = "Takım Bulunamadı";
 
-            const matchKey = (home + away).replace(/\s+/g, '').toLowerCase();
-            const resultData = resultsMap[matchKey] || { score: 'Oynanmadı', iy: '' };
-
-            matches.push({
-                id: matchCount,
-                league: league,
-                time: time,
-                match: `${home} - ${away}`,
-                result: resultData.score,
-                iy: resultData.iy
+            fixtures.push({
+                home: home,
+                away: away,
+                fullLine: `${home} - ${away}`,
+                matchData: ""
             });
         }
     }
 
-    // 3. Tabloyu oluştur (En alttan 1 ile başlayarak)
-    matches.reverse().forEach((m, index) => {
-        const row = `<tr>
-            <td>${index + 1}</td>
-            <td><small>${m.league}</small><br><strong>${m.time}</strong></td>
-            <td>${m.match}</td>
-            <td>
-                <span class="score-badge">${m.result}</span>
-                <span class="iy-badge">${m.iy}</span>
-            </td>
-        </tr>`;
-        tableBody.innerHTML += row;
+    // 2. Sonuçları Ayrıştırma
+    // Takım isimlerini ve skorları yakalamak için daha esnek bir yapı
+    const resultsBlocks = resultsText.split('Bitti').filter(b => b.trim() !== "");
+    let matchResults = [];
+
+    resultsBlocks.forEach(block => {
+        const lines = block.split('\n').map(l => l.trim()).filter(l => l !== "");
+        // Skor satırını bul (Örn: 2 - 1)
+        const scoreIndex = lines.findIndex(l => l.match(/\d+ - \d+/));
+        
+        if (scoreIndex !== -1) {
+            const home = lines[scoreIndex - 1];
+            const away = lines[scoreIndex + 1];
+            const score = lines[scoreIndex];
+            const iy = lines.find(l => l.includes("İ.Y")) || "İ.Y 0 - 0";
+            
+            matchResults.push({
+                home: home,
+                away: away,
+                resultStr: `Skor: ${score} (${iy})`
+            });
+        }
     });
 
-    outputTable.style.display = 'table';
+    // 3. Eşleştirme (İsim benzerliğine göre)
+    fixtures.forEach(f => {
+        const found = matchResults.find(r => 
+            (f.home.toLowerCase().includes(r.home?.toLowerCase()) || r.home?.toLowerCase().includes(f.home.toLowerCase())) &&
+            (f.away.toLowerCase().includes(r.away?.toLowerCase()) || r.away?.toLowerCase().includes(f.away.toLowerCase()))
+        );
+        if (found) {
+            f.matchData = found.resultStr;
+        } else {
+            f.matchData = "Sonuç Bulunamadı";
+        }
+    });
+
+    // 4. Ters Çevirmeden En Alttan Numaralandırarak Yazdırma
+    // Kullanıcı "ters çevirmeden" dediği için normal sırayla ancak 1'den başlayarak
+    let output = "";
+    fixtures.forEach((f, index) => {
+        output += `${index + 1}. ${f.home} - ${f.away}  ==>  ${f.matchData}\n`;
+    });
+
+    resultArea.innerText = output;
 }
 </script>
 
