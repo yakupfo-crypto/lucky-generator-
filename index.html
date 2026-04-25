@@ -3,203 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maç Sıralayıcı - Canlı Fikstür</title>
+    <title>Dinamik Skor Eşleştirici</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --bg-color: #f4f7f6;
-            --card-bg: #ffffff;
-            --primary-color: #2c3e50;
-            --accent-color: #3498db;
-            --text-muted: #7f8c8d;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 800px;
-        }
-
-        h1 {
-            text-align: center;
-            color: var(--primary-color);
-            margin-bottom: 20px;
-        }
-
-        .input-section {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-
-        textarea {
-            width: 100%;
-            height: 150px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            font-size: 14px;
-            resize: vertical;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            margin-top: 10px;
-            transition: background 0.3s;
-        }
-
-        button:hover {
-            background-color: #2980b9;
-        }
-
-        .match-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .match-card {
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-            transition: transform 0.2s;
-        }
-
-        .match-card:hover {
-            transform: scale(1.01);
-        }
-
-        .match-number {
-            background: var(--primary-color);
-            color: white;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-weight: bold;
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-
-        .match-details {
-            flex-grow: 1;
-        }
-
-        .match-time {
-            font-weight: bold;
-            color: var(--accent-color);
-            margin-right: 10px;
-        }
-
-        .match-teams {
-            font-size: 16px;
-            color: #333;
-        }
-
-        /* Mobil Uyumluluk */
-        @media (max-width: 600px) {
-            body { padding: 10px; }
-            .match-card { padding: 12px; }
-            .match-teams { font-size: 14px; }
-        }
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .match-row:nth-child(even) { background-color: #1e293b; }
+        .live-pulse { animation: pulse 2s infinite; color: #22c55e; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     </style>
 </head>
-<body>
+<body class="p-4 md:p-8">
 
-<div class="container">
-    <h1>Maç Listesi Sıralayıcı</h1>
-    
-    <div class="input-section">
-        <textarea id="rawList" placeholder="Maç listesini buraya yapıştırın..."></textarea>
-        <button onclick="processList()">Listeyi Alttan Üste Numaralandır</button>
+    <div class="max-w-6xl mx-auto">
+        <h2 class="text-2xl font-bold mb-6 text-blue-400 border-b border-slate-700 pb-2">Maç Skor Eşleştirme Paneli</h2>
+        
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div>
+                <label class="block text-sm font-medium mb-2 text-slate-400">1. Fikstür Listesi (Saatli Bölüm)</label>
+                <textarea id="fixtureInput" class="w-full h-48 p-3 bg-slate-800 border border-slate-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Buraya fikstür listesini yapıştırın..."></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2 text-slate-400">2. Skor Listesi (Sonuçlu Bölüm)</label>
+                <textarea id="resultsInput" class="w-full h-48 p-3 bg-slate-800 border border-slate-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Buraya skorlu listeyi yapıştırın..."></textarea>
+            </div>
+        </div>
+
+        <button onclick="matchMatches()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all mb-8 shadow-lg">
+            SKORLARI EŞLEŞTİR VE LİSTELE
+        </button>
+
+        <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-700 shadow-2xl">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-800 text-slate-300 text-sm">
+                    <tr>
+                        <th class="p-4">SAAT / DURUM</th>
+                        <th class="p-4 text-right">EV SAHİBİ</th>
+                        <th class="p-4 text-center">SKOR</th>
+                        <th class="p-4 text-left">DEPLASMAN</th>
+                        <th class="p-4 text-center">İY</th>
+                    </tr>
+                </thead>
+                <tbody id="resultTableBody">
+                    <tr>
+                        <td colspan="5" class="p-10 text-center text-slate-500 italic">Henüz veri işlenmedi. Yukarıdaki alanlara listeleri yapıştırıp butona basın.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div id="output" class="match-list"></div>
-</div>
+    <script>
+        function matchMatches() {
+            const fixtureText = document.getElementById('fixtureInput').value;
+            const resultsText = document.getElementById('resultsInput').value;
+            const tbody = document.getElementById('resultTableBody');
+            tbody.innerHTML = '';
 
-<script>
-    function processList() {
-        const input = document.getElementById('rawList').value;
-        const output = document.getElementById('output');
-        output.innerHTML = '';
+            // 1. Fikstür Ayrıştırma (Saat ve Takımları bulur)
+            // Mantık: Saat formatından (00:00) sonra gelen iki satır takımlardır.
+            const fixLines = fixtureText.split('\n').map(l => l.trim()).filter(l => l !== "");
+            let fixtures = [];
 
-        // Satırları ayır ve boş olmayanları al
-        const lines = input.split('\n').map(line => line.trim()).filter(line => line !== "");
-        
-        let matches = [];
-        
-        // Regex: Saat formatını (00:00) bulur
-        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-
-        for (let i = 0; i < lines.length; i++) {
-            if (timeRegex.test(lines[i])) {
-                let time = lines[i];
-                let team1 = lines[i+1] || "";
-                let separator = lines[i+2] || "";
-                let team2 = lines[i+3] || "";
-
-                // Eğer format "Saat - Takım1 - Takım2" şeklindeyse
-                if(separator === "-") {
-                    matches.push({
-                        time: time,
-                        teams: `${team1} vs ${team2}`
+            for (let i = 0; i < fixLines.length; i++) {
+                if (/^\d{2}:\d{2}$/.test(fixLines[i])) {
+                    fixtures.push({
+                        time: fixLines[i],
+                        home: fixLines[i+1],
+                        away: fixLines[i+2]
                     });
-                    i += 3; // İşlenen satırları atla
                 }
             }
+
+            // 2. Skor Ayrıştırma
+            // Mantık: Takım isimlerini anahtar olarak kullanıp altındaki skorları çeker.
+            const resLines = resultsText.split('\n').map(l => l.trim()).filter(l => l !== "");
+            
+            fixtures.forEach(fix => {
+                let matchData = { score: "- / -", iy: "-", status: "Bekliyor" };
+
+                // Skor listesinde ev sahibi takımı ara
+                const resIdx = resLines.findIndex(line => line === fix.home);
+                
+                if (resIdx !== -1 && resLines[resIdx + 1] === fix.away) {
+                    // Skor genellikle takımların bir üstündeki veya bir altındaki satırda olur.
+                    // Senin verdiğin örnekte Takım 1 - Takım 2 arasındaydı:
+                    matchData.score = resLines[resIdx + 1] === fix.away ? "Veri Bulunamadı" : "-";
+                    
+                    // Karmaşık metin içinde skor ve İY bulma (regex ile)
+                    // Alt alta olan satırlarda skor (0 - 0) ve İY (İ.Y 0 - 0) formatını arıyoruz.
+                    for(let j = resIdx - 5; j < resIdx + 10; j++) {
+                        if(!resLines[j]) continue;
+                        
+                        // Maç sonucu tespiti (Örn: 2 - 1)
+                        if (/^\d+\s*-\s*\d+$/.test(resLines[j])) {
+                            matchData.score = resLines[j];
+                        }
+                        // İY tespiti
+                        if (resLines[j].includes("İ.Y")) {
+                            matchData.iy = resLines[j].replace("İ.Y", "").trim();
+                        }
+                        // Durum tespiti (Bitti, 90', Ert vb.)
+                        if (["Bitti", "ERT", "PENMS", "UZMS"].includes(resLines[j]) || resLines[j].includes("'")) {
+                            matchData.status = resLines[j];
+                        }
+                    }
+                }
+
+                // Tabloya ekle
+                const isLive = matchData.status.includes("'");
+                const row = `
+                    <tr class="match-row border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
+                        <td class="p-4 text-xs">
+                            <div class="font-bold text-slate-400">${fix.time}</div>
+                            <div class="${isLive ? 'live-pulse font-bold' : 'text-slate-500'}">${matchData.status}</div>
+                        </td>
+                        <td class="p-4 text-right font-semibold text-sm md:text-base">${fix.home}</td>
+                        <td class="p-4 text-center">
+                            <span class="bg-slate-700 px-3 py-1 rounded text-blue-400 font-bold">${matchData.score}</span>
+                        </td>
+                        <td class="p-4 text-left font-semibold text-sm md:text-base">${fix.away}</td>
+                        <td class="p-4 text-center text-xs text-slate-400 font-mono">${matchData.iy}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
         }
-
-        // Listeyi tersine çevir (En alttaki 1 numara olsun diye)
-        // Eğer girişin zaten kronolojik olduğunu ve sadece ters numara istediğini varsayarsak:
-        // Ancak isteğine göre: alttan 1 başlayarak üste doğru yazıyoruz.
-        
-        const totalMatches = matches.length;
-
-        matches.forEach((match, index) => {
-            // Matematiksel olarak: En üstteki maç (Total), en alttaki maç (1) numara alır.
-            let displayIndex = totalMatches - index;
-
-            const card = document.createElement('div');
-            card.className = 'match-card';
-            card.innerHTML = `
-                <div class="match-number">${displayIndex}</div>
-                <div class="match-details">
-                    <span class="match-time">${match.time}</span>
-                    <span class="match-teams">${match.teams}</span>
-                </div>
-            `;
-            output.appendChild(card);
-        });
-        
-        if(matches.length === 0) {
-            output.innerHTML = "<p style='text-align:center;'>Geçerli bir maç formatı bulunamadı.</p>";
-        }
-    }
-</script>
-
+    </script>
 </body>
 </html>
