@@ -3,99 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Maç Sonuçları Paneli</title>
+    <title>Canlı Maç Numaralandırıcı</title>
     <style>
-        body { font-family: sans-serif; background-color: #f4f4f4; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #2c3e50; color: white; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        .score-box { font-weight: bold; color: #e74c3c; }
-        .ht-box { font-size: 0.9em; color: #7f8c8d; }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #27ae60;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #219150;
+        }
+
+        #result {
+            margin-top: 25px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .match-row {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+
+        .match-number {
+            font-weight: bold;
+            color: var(--accent-color);
+            min-width: 30px;
+        }
+
+        .match-content {
+            flex: 1;
+        }
+
+        .league-title {
+            background: #e9ecef;
+            padding: 5px 10px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-top: 15px;
+            border-radius: 4px;
+            color: #555;
+        }
+
+        /* Mobil Uyumluluk */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            button { font-size: 14px; }
+        }
     </style>
 </head>
 <body>
 
-    <h2>Maç Sonuçları Sıralı Listesi</h2>
-    <table id="matchTable">
-        <thead>
-            <tr>
-                <th>No</th>
-                <th>Takımlar</th>
-                <th>İ.Y / MS</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody">
-            </tbody>
-    </table>
+<div class="container">
+    <h2>Maç Listesi Numaralandırıcı</h2>
+    <p style="font-size: 12px; color: #666; text-align: center;">Maç listesini yapıştırın. En alttaki maç 1'den başlayarak numaralandırılacaktır.</p>
+    
+    <textarea id="inputList" placeholder="Maçları buraya yapıştırın..."></textarea>
+    
+    <button onclick="processList()">LİSTEYİ OLUŞTUR</button>
 
-    <script>
-        // 1. VERİ GİRİŞİ: Buraya ham metinler yapıştırıldığında sistem çalışır.
-        const fixtureRaw = `...Üstteki Örnek Maç Listesi Buraya Gelecek...`;
-        const resultsRaw = `...Alttaki Skorlu Maç Listesi Buraya Gelecek...`;
+    <div id="result"></div>
+</div>
 
-        function parseData() {
-            // Fikstürdeki satırları temizle ve diziye al
-            const lines = fixtureRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.includes(':'));
-            
-            let matches = [];
-            for(let i=0; i<lines.length; i+=2) {
-                if(lines[i] && lines[i+1]) {
-                    matches.push({ team1: lines[i], team2: lines[i+1] });
-                }
-            }
+<script>
+    function processList() {
+        const input = document.getElementById('inputList').value;
+        const resultDiv = document.getElementById('result');
+        
+        if (!input.trim()) {
+            alert("Lütfen bir liste yapıştırın!");
+            return;
+        }
 
-            // Skorları içeren metni analiz et
-            const resultBlocks = resultsRaw.split(/İ\.Y/);
-            const scoreMap = {};
+        // Satırlara böl ve temizle
+        let lines = input.split('\n').map(line => line.trim());
+        
+        let matchBlocks = [];
+        let currentBlock = "";
 
-            // Skor eşleştirme mantığı (Takım isimlerini anahtar olarak kullanır)
-            // Not: Bu kısım gerçek verideki "Bitti", "90'" gibi durumları ve skorları yakalar
-            const linesResults = resultsRaw.split('\n').map(l => l.trim());
-            
-            const tableBody = document.getElementById('tableBody');
-            
-            // TERS SIRALAMA VE NUMARALANDIRMA (Aşağıdan yukarıya 1'den başlayarak)
-            let counter = 1;
-            for (let i = matches.length - 1; i >= 0; i--) {
-                const match = matches[i];
-                const matchDisplay = `${match.team1} - ${match.team2}`;
-                
-                // Skor bulma algoritması
-                let foundScore = "Henüz Başlamadı";
-                let foundHT = "-";
+        // Maçları tespit etme mantığı (Saat içeren satırlar maç başlangıcı kabul edilir)
+        // Ancak senin formatında "Takım - Takım" yapısı asıl maç satırı.
+        
+        let finalOutput = [];
+        let matchesFound = [];
 
-                // Ham metin içinde takımları arayarak skoru eşleştir
-                const resultIndex = resultsRaw.indexOf(match.team1);
-                if (resultIndex !== -1) {
-                    const segment = resultsRaw.substring(resultIndex, resultIndex + 200);
-                    const scoreMatch = segment.match(/(\d+)\s*-\s*(\d+)/);
-                    const iyMatch = segment.match(/İ\.Y\s*(\d+)\s*-\s*(\d+)/);
-                    
-                    if (scoreMatch) foundScore = `${scoreMatch[1]} - ${scoreMatch[2]}`;
-                    if (iyMatch) foundHT = `(İ.Y ${iyMatch[1]} - ${iyMatch[2]})`;
-                }
-
-                const row = `<tr>
-                    <td>${counter}</td>
-                    <td>${matchDisplay}</td>
-                    <td><span class="score-box">${foundScore}</span> <span class="ht-box">${foundHT}</span></td>
-                </tr>`;
-                
-                tableBody.innerHTML += row;
-                counter++;
+        // Önce tüm maçları (tire içeren satırları) ayıklayalım
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes('-') && lines[i].length > 3) {
+                matchesFound.push({
+                    originalIndex: i,
+                    content: lines[i]
+                });
             }
         }
 
-        // Sayfa yüklendiğinde çalıştır
-        window.onload = parseData;
+        // En alttaki maça 1 verecek şekilde numaraları ters ata
+        let matchCounter = matchesFound.length;
+        let matchMap = {};
 
-        /* GELİŞTİRİCİ NOTLARI:
-           1. fixtureRaw: Kullanıcıdan gelen "saat - takım1 - takım2" listesini alır.
-           2. resultsRaw: "Bitti - Takım1 - Skor - Takım2 - İY" formatındaki listeyi alır.
-           3. Eşleşme: Takım isimleri üzerinden substring araması yaparak skorları yakalar.
-           4. Sıralama: Array indexi tersten okunarak (matches.length - 1) tabloya basılır.
-        */
-    </script>
+        matchesFound.forEach((match) => {
+            matchMap[match.originalIndex] = matchCounter--;
+        });
+
+        // Çıktıyı oluştur
+        let html = "";
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i] === "") continue;
+
+            if (matchMap[i]) {
+                html += `<div class="match-row">
+                            <span class="match-number">${matchMap[i]}.</span>
+                            <span class="match-content">${lines[i]}</span>
+                         </div>`;
+            } else {
+                // Eğer saat veya lig ismiyse farklı stil ver
+                const isTime = /^\d{2}:\d{2}$/.test(lines[i]);
+                if (isTime) {
+                    html += `<div style="color: #999; font-size: 0.85em; margin-top:5px; padding-left: 40px;">${lines[i]}</div>`;
+                } else {
+                    html += `<div class="league-title">${lines[i]}</div>`;
+                }
+            }
+        }
+
+        resultDiv.innerHTML = html;
+    }
+</script>
+
 </body>
 </html>
