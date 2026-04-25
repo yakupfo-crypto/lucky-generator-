@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maç Listesi Numaralandırıcı</title>
+    <title>Maç Sıralayıcı - Canlı Fikstür</title>
     <style>
         :root {
             --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
             --primary-color: #2c3e50;
-            --accent-color: #27ae60;
-            --white: #ffffff;
+            --accent-color: #3498db;
+            --text-muted: #7f8c8d;
         }
 
         body {
@@ -25,18 +26,26 @@
         .container {
             width: 100%;
             max-width: 800px;
-            background: var(--white);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        h2 { color: var(--primary-color); text-align: center; }
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .input-section {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
 
         textarea {
             width: 100%;
-            height: 200px;
-            border: 2px solid #ddd;
+            height: 150px;
+            border: 1px solid #ddd;
             border-radius: 8px;
             padding: 10px;
             font-size: 14px;
@@ -46,92 +55,149 @@
 
         button {
             width: 100%;
+            padding: 12px;
             background-color: var(--accent-color);
             color: white;
-            padding: 15px;
             border: none;
             border-radius: 8px;
+            cursor: pointer;
             font-size: 16px;
             font-weight: bold;
-            cursor: pointer;
-            margin-top: 15px;
+            margin-top: 10px;
             transition: background 0.3s;
         }
 
-        button:hover { background-color: #219150; }
-
-        #result {
-            margin-top: 20px;
-            white-space: pre-wrap;
-            background: #f9f9f9;
-            padding: 15px;
-            border-left: 5px solid var(--accent-color);
-            border-radius: 4px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            color: #333;
+        button:hover {
+            background-color: #2980b9;
         }
 
-        .match-line {
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
+        .match-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .match-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+
+        .match-card:hover {
+            transform: scale(1.01);
+        }
+
+        .match-number {
+            background: var(--primary-color);
+            color: white;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .match-details {
+            flex-grow: 1;
+        }
+
+        .match-time {
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-right: 10px;
+        }
+
+        .match-teams {
+            font-size: 16px;
+            color: #333;
         }
 
         /* Mobil Uyumluluk */
         @media (max-width: 600px) {
             body { padding: 10px; }
-            .container { padding: 15px; }
-            button { font-size: 14px; }
+            .match-card { padding: 12px; }
+            .match-teams { font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>⚽ Maç Listesi Düzenleyici</h2>
-    <p style="font-size: 0.9em; color: #666;">Listenizi yapıştırın ve numaralandırın (En alttan başlar).</p>
+    <h1>Maç Listesi Sıralayıcı</h1>
     
-    <textarea id="rawInput" placeholder="Maç listesini buraya yapıştırın..."></textarea>
-    
-    <button onclick="processMatches()">LİSTEYİ OLUŞTUR</button>
+    <div class="input-section">
+        <textarea id="rawList" placeholder="Maç listesini buraya yapıştırın..."></textarea>
+        <button onclick="processList()">Listeyi Alttan Üste Numaralandır</button>
+    </div>
 
-    <div id="result">Sonuç burada görünecek...</div>
+    <div id="output" class="match-list"></div>
 </div>
 
 <script>
-    function processMatches() {
-        const input = document.getElementById('rawInput').value;
-        const resultDiv = document.getElementById('result');
-        
-        if (!input.trim()) {
-            resultDiv.innerText = "Lütfen bir liste girin!";
-            return;
-        }
+    function processList() {
+        const input = document.getElementById('rawList').value;
+        const output = document.getElementById('output');
+        output.innerHTML = '';
 
-        // Satırları ayır ve boş olmayanları temizle
-        let lines = input.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        // Satırları ayır ve boş olmayanları al
+        const lines = input.split('\n').map(line => line.trim()).filter(line => line !== "");
         
-        let processedLines = [];
-        let matchLines = [];
+        let matches = [];
+        
+        // Regex: Saat formatını (00:00) bulur
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 
-        // Maç satırlarını tespit et (İçinde "-" olan ve saat bilgisi içermeyen satırlar genelde maçtır)
-        // Ancak senin formatında "Takım A - Takım B" yapısı var.
-        
         for (let i = 0; i < lines.length; i++) {
-            if (lines[i].includes('-') && !lines[i].includes(':')) {
-                matchLines.push(i);
+            if (timeRegex.test(lines[i])) {
+                let time = lines[i];
+                let team1 = lines[i+1] || "";
+                let separator = lines[i+2] || "";
+                let team2 = lines[i+3] || "";
+
+                // Eğer format "Saat - Takım1 - Takım2" şeklindeyse
+                if(separator === "-") {
+                    matches.push({
+                        time: time,
+                        teams: `${team1} vs ${team2}`
+                    });
+                    i += 3; // İşlenen satırları atla
+                }
             }
         }
 
-        // Numaralandırma (En alttaki maçtan başla: 1, 2, 3...)
-        let counter = 1;
-        for (let j = matchLines.length - 1; j >= 0; j--) {
-            let index = matchLines[j];
-            lines[index] = `[${counter}] ` + lines[index];
-            counter++;
-        }
+        // Listeyi tersine çevir (En alttaki 1 numara olsun diye)
+        // Eğer girişin zaten kronolojik olduğunu ve sadece ters numara istediğini varsayarsak:
+        // Ancak isteğine göre: alttan 1 başlayarak üste doğru yazıyoruz.
+        
+        const totalMatches = matches.length;
 
-        resultDiv.innerText = lines.join('\n');
+        matches.forEach((match, index) => {
+            // Matematiksel olarak: En üstteki maç (Total), en alttaki maç (1) numara alır.
+            let displayIndex = totalMatches - index;
+
+            const card = document.createElement('div');
+            card.className = 'match-card';
+            card.innerHTML = `
+                <div class="match-number">${displayIndex}</div>
+                <div class="match-details">
+                    <span class="match-time">${match.time}</span>
+                    <span class="match-teams">${match.teams}</span>
+                </div>
+            `;
+            output.appendChild(card);
+        });
+        
+        if(matches.length === 0) {
+            output.innerHTML = "<p style='text-align:center;'>Geçerli bir maç formatı bulunamadı.</p>";
+        }
     }
 </script>
 
