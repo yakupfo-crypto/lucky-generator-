@@ -3,112 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Skor Analiz & Fikstür</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Canlı Skor & Fikstür Eşleştirici</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
-        .match-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
-        .match-card:hover { border-left-color: #3b82f6; background-color: #1e293b; }
-        .number-badge { min-width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; background: #334155; border-radius: 50%; font-weight: bold; font-size: 0.8rem; }
+        :root {
+            --primary: #2c3e50;
+            --secondary: #27ae60;
+            --accent: #e74c3c;
+            --light: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        h1 { color: var(--primary); text-align: center; margin-bottom: 30px; }
+
+        .input-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-size: 14px;
+        }
+
+        button {
+            grid-column: span 2;
+            padding: 15px;
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover { background-color: #219150; }
+
+        .match-card {
+            display: grid;
+            grid-template-columns: 50px 1fr 120px 100px;
+            align-items: center;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            padding: 12px 10px;
+            transition: background 0.2s;
+        }
+
+        .match-card:hover { background: #f9f9f9; }
+
+        .no { font-weight: bold; color: #888; }
+        .teams { font-weight: 500; color: var(--primary); }
+        .score { font-weight: bold; color: var(--accent); text-align: center; font-size: 1.1rem; }
+        .half-time { font-size: 0.85rem; color: #666; text-align: right; }
+
+        /* Mobil Uyumluluk */
+        @media (max-width: 600px) {
+            .input-area { grid-template-columns: 1fr; }
+            button { grid-column: span 1; }
+            .match-card {
+                grid-template-columns: 40px 1fr 80px;
+                gap: 5px;
+            }
+            .half-time {
+                grid-column: 2 / 4;
+                text-align: left;
+                padding-left: 0;
+                margin-top: -5px;
+                font-style: italic;
+            }
+            .teams { font-size: 0.9rem; }
+        }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body>
 
-    <div class="max-w-6xl mx-auto">
-        <header class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-blue-400">Skor Eşleştirme Sistemi</h1>
-            <p class="text-gray-400 mt-2">Metinleri yapıştırın, sonuçları anında bağlayın.</p>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <textarea id="fixtureInput" class="w-full h-48 p-4 bg-slate-800 rounded-lg border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Fikstür listesini buraya yapıştırın..."></textarea>
-            <textarea id="resultsInput" class="w-full h-48 p-4 bg-slate-800 rounded-lg border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Sonuçlar listesini buraya yapıştırın..."></textarea>
-        </div>
-
-        <div class="flex justify-center mb-10">
-            <button onclick="processData()" class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-3 rounded-full font-bold shadow-lg transform active:scale-95 transition-all">
-                VERİLERİ ANALİZ ET VE EŞLEŞTİR
-            </button>
-        </div>
-
-        <div id="output" class="space-y-3">
-            </div>
+<div class="container">
+    <h1>🏆 Fikstür & Sonuç Eşleştirici</h1>
+    
+    <div class="input-area">
+        <textarea id="fixtureInput" placeholder="Fikstür programını buraya yapıştırın..."></textarea>
+        <textarea id="resultInput" placeholder="Sonuçlar kısmını buraya yapıştırın..."></textarea>
+        <button onclick="processData()">LİSTEYİ OLUŞTUR VE EŞLEŞTİR</button>
     </div>
 
-    <script>
-        function processData() {
-            const fixtureText = document.getElementById('fixtureInput').value;
-            const resultsText = document.getElementById('resultsInput').value;
-            const output = document.getElementById('output');
-            output.innerHTML = '';
+    <div id="output"></div>
+</div>
 
-            // 1. Fikstür Parçalama (Saat ve Takımları Al)
-            const fixtureLines = fixtureText.split('\n').filter(l => l.trim() !== '');
-            let fixtures = [];
+<script>
+function processData() {
+    const fixtureText = document.getElementById('fixtureInput').value;
+    const resultText = document.getElementById('resultInput').value;
+    const output = document.getElementById('output');
+    output.innerHTML = '';
+
+    // Fikstür Analizi (Takım isimlerini ayıkla)
+    const fixtureLines = fixtureText.split('\n').map(l => l.trim()).filter(l => l !== "" && l !== "-");
+    let matches = [];
+
+    for (let i = 0; i < fixtureLines.length; i++) {
+        // Saat formatı veya Lig adı değilse ve bir sonraki satır varsa muhtemelen maç eşleşmesidir
+        if (fixtureLines[i].includes(':') || fixtureLines[i].includes('Lig') || fixtureLines[i].includes('Kupası')) continue;
+        
+        let home = fixtureLines[i];
+        let away = fixtureLines[i+1];
+        
+        if(home && away && !away.includes(':')) {
+            matches.push({ home, away });
+            i++; // Deplasman takımını atla
+        }
+    }
+
+    // Sonuç Analizi
+    const resultLines = resultText.split('\n').map(l => l.trim());
+    let resultsMap = {};
+
+    for (let i = 0; i < resultLines.length; i++) {
+        let line = resultLines[i];
+        // Eğer skor satırıysa (Örn: 2 - 1)
+        if (line.includes('-') && /\d/.test(line)) {
+            let homeTeam = resultLines[i-1];
+            let awayTeam = resultLines[i+1];
+            let score = line;
+            let ht = "";
             
-            for (let i = 0; i < fixtureLines.length; i++) {
-                if (fixtureLines[i].includes(':') && fixtureLines[i+1] && fixtureLines[i+1].includes('-')) {
-                    const time = fixtureLines[i].trim();
-                    const teams = fixtureLines[i+1].split('-').map(t => t.trim());
-                    fixtures.push({ time, home: teams[0], away: teams[1] });
-                }
+            // İ.Y skorunu bul (genelde 2 satır sonra)
+            if(resultLines[i+2] && resultLines[i+2].includes('İ.Y')) {
+                ht = resultLines[i+2];
             }
 
-            // 2. Sonuç Parçalama
-            const resultBlocks = resultsText.split('Bitti').filter(b => b.trim().length > 10);
-            let scoreMap = {};
-
-            resultBlocks.forEach(block => {
-                const lines = block.split('\n').filter(l => l.trim() !== '');
-                // Takım ve skor tespiti
-                let homeTeam = "", awayTeam = "", score = "v", iy = "";
-                
-                for(let j=0; j<lines.length; j++) {
-                    if (lines[j].includes(' - ')) {
-                        score = lines[j].trim();
-                        homeTeam = lines[j-1]?.trim();
-                        awayTeam = lines[j+1]?.trim();
-                    }
-                    if (lines[j].includes('İ.Y')) {
-                        iy = lines[j].trim();
-                    }
-                }
-                if (homeTeam) {
-                    scoreMap[homeTeam] = { score, iy };
-                }
-            });
-
-            // 3. Eşleştirme ve Numaralandırma (Alttan Yukarı)
-            const matchedData = fixtures.map(f => {
-                const result = scoreMap[f.home] || { score: "- / -", iy: "İ.Y - / -" };
-                return { ...f, ...result };
-            });
-
-            // En alttaki maç 1 olacak şekilde numaralandır
-            matchedData.reverse().forEach((item, index) => {
-                const rowNum = index + 1;
-                const html = `
-                    <div class="match-card bg-slate-900 p-4 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4 border border-slate-800">
-                        <div class="flex items-center gap-4 w-full md:w-1/3">
-                            <span class="number-badge text-blue-400">${rowNum}</span>
-                            <span class="text-xs font-mono text-gray-500 bg-slate-800 px-2 py-1 rounded">${item.time}</span>
-                            <div class="text-sm font-semibold truncate text-gray-200">${item.home}</div>
-                        </div>
-                        
-                        <div class="flex flex-col items-center justify-center w-full md:w-1/3">
-                            <div class="text-xl font-black text-white tracking-widest">${item.score}</div>
-                            <div class="text-[10px] text-gray-500 font-bold uppercase mt-1">${item.iy}</div>
-                        </div>
-
-                        <div class="flex items-center justify-end gap-4 w-full md:w-1/3 text-right">
-                            <div class="text-sm font-semibold truncate text-gray-200">${item.away}</div>
-                        </div>
-                    </div>
-                `;
-                output.innerHTML += html;
-            });
+            if(homeTeam && awayTeam) {
+                resultsMap[homeTeam + " vs " + awayTeam] = { score, ht };
+            }
         }
-    </script>
+    }
+
+    // Tersten numaralandırarak HTML oluştur (En alttaki 1 olacak)
+    const totalMatches = matches.length;
+    let html = "";
+
+    matches.reverse().forEach((match, index) => {
+        // Eşleşen sonucu bul
+        let matchKey = Object.keys(resultsMap).find(key => 
+            key.toLowerCase().includes(match.home.toLowerCase()) || 
+            match.home.toLowerCase().includes(key.split(' vs ')[0].toLowerCase())
+        );
+
+        let finalScore = resultsMap[matchKey]?.score || "0 - 0";
+        let finalHT = resultsMap[matchKey]?.ht || "İ.Y 0 - 0";
+        let matchNo = totalMatches - index;
+
+        html += `
+            <div class="match-card">
+                <div class="no">${matchNo}.</div>
+                <div class="teams">${match.home} - ${match.away}</div>
+                <div class="score">${finalScore}</div>
+                <div class="half-time">${finalHT}</div>
+            </div>
+        `;
+    });
+
+    output.innerHTML = html || "<p style='text-align:center'>Eşleşen veri bulunamadı. Lütfen metinleri kontrol edin.</p>";
+}
+</script>
+
 </body>
 </html>
